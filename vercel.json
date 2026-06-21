@@ -1,9 +1,6 @@
 {
-  "buildCommand": "npx vite build --outDir dist",
-  "outputDirectory": "dist",
+  "buildCommand": "NITRO_PRESET=vercel npm run build",
+  "outputDirectory": ".vercel/output",
   "installCommand": "npm install",
-  "framework": null,
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
+  "framework": null
 }
