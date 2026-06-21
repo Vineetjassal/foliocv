@@ -1,14 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
-import logoUrl from "@/assets/logo.png";
+import { Logo } from "@/components/Logo";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Monogram — Resume to portfolio, in seconds" },
-      { name: "description", content: "Upload your CV and GitHub. Get a beautiful, editable portfolio site you can download as code." },
+      { name: "description", content: "Upload your résumé JSON and GitHub. Get a beautiful, editable portfolio site you can download as code." },
       { property: "og:title", content: "Monogram — Resume to portfolio" },
-      { property: "og:description", content: "Upload your CV and GitHub. Get a beautiful, editable portfolio site you can download as code." },
+      { property: "og:description", content: "Upload your résumé JSON and GitHub. Get a beautiful, editable portfolio site you can download as code." },
     ],
   }),
   component: Landing,
@@ -48,10 +48,10 @@ function Landing() {
   }, []);
 
   return (
-    <div ref={heroRef} className="min-h-screen grain relative overflow-hidden">
+    <div ref={heroRef} className="min-h-screen grain relative overflow-hidden bg-background">
       <header className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-6 py-5 sm:px-10">
-        <div className="flex items-center gap-2 m-fade">
-          <img src={logoUrl} alt="Monogram" className="h-7 w-7" />
+        <div className="flex items-center gap-2 m-fade text-foreground">
+          <Logo size={28} />
           <span className="font-serif text-xl">Monogram</span>
         </div>
         <nav className="flex items-center gap-2 text-sm m-fade">
@@ -63,7 +63,9 @@ function Landing() {
       </header>
 
       <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center px-6 text-center">
-        <img src={logoUrl} alt="" className="m-logo mb-8 h-16 w-16" />
+        <div className="m-logo mb-8 text-foreground">
+          <Logo size={72} />
+        </div>
         <div className="m-fade mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">
           Portfolio builder · No signup
         </div>
@@ -76,7 +78,7 @@ function Landing() {
           into a portfolio.
         </h1>
         <p className="m-fade mt-6 max-w-xl text-balance text-muted-foreground">
-          Drop a PDF, paste a GitHub link. Monogram crafts a quiet, beautiful site
+          Drop a résumé JSON, paste a GitHub link. Monogram crafts a quiet, beautiful site
           you can tweak inline and download as plain HTML.
         </p>
         <div className="m-fade mt-10 flex flex-wrap items-center justify-center gap-3">
@@ -93,8 +95,8 @@ function Landing() {
 
         <div id="how" className="m-fade mt-28 grid w-full grid-cols-1 gap-px overflow-hidden rounded-2xl border border-border bg-border text-left sm:grid-cols-3">
           {[
-            { n: "01", t: "Upload", d: "Drop your résumé PDF and paste your GitHub username." },
-            { n: "02", t: "Edit", d: "Tweak any text inline. Pick from 3 minimal templates." },
+            { n: "01", t: "Upload", d: "Drop a résumé JSON file and paste your GitHub username." },
+            { n: "02", t: "Edit", d: "Tweak any text inline. Pick projects to show. Choose from 3 minimal templates." },
             { n: "03", t: "Download", d: "Get a zip of clean HTML, CSS & JS — yours to host anywhere." },
           ].map((s) => (
             <div key={s.n} className="bg-background p-6">
@@ -110,13 +112,13 @@ function Landing() {
         </footer>
       </main>
 
-      {/* Subtle background glow */}
+      {/* Subtle background glow that matches the page bg */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10"
         style={{
           background:
-            "radial-gradient(900px 500px at 50% 0%, oklch(0.18 0 0 / 0.7), transparent 60%)",
+            "radial-gradient(900px 500px at 50% 0%, color-mix(in oklab, var(--foreground) 8%, transparent), transparent 60%)",
         }}
       />
     </div>

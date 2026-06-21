@@ -1,9 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import logoUrl from "@/assets/logo.png";
+import { Logo } from "@/components/Logo";
 import { useStore } from "@/lib/store";
 import { buildSite } from "@/lib/templates";
-import type { PortfolioData, TemplateId } from "@/lib/types";
+import type { PortfolioData, Project, TemplateId } from "@/lib/types";
 
 export const Route = createFileRoute("/edit")({
   head: () => ({ meta: [{ title: "Editor — Monogram" }] }),
@@ -19,7 +19,7 @@ const TEMPLATES: { id: TemplateId; name: string; tagline: string }[] = [
 function Editor() {
   const navigate = useNavigate();
   const { data, template, patch, setTemplate } = useStore();
-  const [tab, setTab] = useState<"design" | "content">("design");
+  const [tab, setTab] = useState<"design" | "content" | "projects">("design");
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeTheme, setIframeTheme] = useState<"dark" | "light">("dark");
 
@@ -29,19 +29,14 @@ function Editor() {
 
   const built = useMemo(() => (data ? buildSite(data, template) : null), [data, template]);
 
-  // Inject into iframe
   useEffect(() => {
     if (!iframeRef.current || !built) return;
     const doc = iframeRef.current.contentDocument;
     if (!doc) return;
-    const html = built.html.replace(
-      "</head>",
-      `<style>${built.css}</style></head>`
-    );
+    const html = built.html.replace("</head>", `<style>${built.css}</style></head>`);
     doc.open();
     doc.write(html);
     doc.close();
-    // theme sync
     setTimeout(() => {
       const root = doc.documentElement;
       if (iframeTheme === "light") root.classList.add("light");
@@ -72,11 +67,10 @@ function Editor() {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
-      {/* Top bar */}
       <header className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-3">
           <Link to="/" className="flex items-center gap-2">
-            <img src={logoUrl} alt="" className="h-6 w-6" />
+            <Logo size={22} />
             <span className="font-serif text-lg">Monogram</span>
           </Link>
           <span className="hidden text-xs text-muted-foreground sm:inline">/ Editing {data.name}</span>
@@ -98,10 +92,9 @@ function Editor() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <aside className="flex w-[340px] shrink-0 flex-col border-r border-border bg-card">
+        <aside className="flex w-[360px] shrink-0 flex-col border-r border-border bg-card">
           <div className="flex border-b border-border text-xs">
-            {(["design", "content"] as const).map((t) => (
+            {(["design", "content", "projects"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -112,7 +105,7 @@ function Editor() {
             ))}
           </div>
           <div className="flex-1 overflow-y-auto p-5">
-            {tab === "design" ? (
+            {tab === "design" && (
               <div className="space-y-3">
                 <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Template</div>
                 {TEMPLATES.map((t) => (
@@ -130,13 +123,12 @@ function Editor() {
                   </button>
                 ))}
               </div>
-            ) : (
-              <ContentPanel data={data} patch={patch} />
             )}
+            {tab === "content" && <ContentPanel data={data} patch={patch} />}
+            {tab === "projects" && <ProjectsPanel data={data} patch={patch} />}
           </div>
         </aside>
 
-        {/* Preview */}
         <main className="flex-1 overflow-hidden bg-muted/30 p-4">
           <div className="mx-auto h-full max-w-[1200px] overflow-hidden rounded-2xl border border-border bg-background shadow-2xl">
             <iframe ref={iframeRef} title="Preview" className="h-full w-full" />
@@ -148,7 +140,6 @@ function Editor() {
 }
 
 function TemplatePreview({ id }: { id: TemplateId }) {
-  // tiny wireframe
   return (
     <div className="mt-3 h-16 w-full overflow-hidden rounded-md border border-border bg-background">
       <svg viewBox="0 0 200 60" className="h-full w-full">
@@ -193,7 +184,9 @@ function ContentPanel({ data, patch }: { data: PortfolioData; patch: (p: Partial
       <Field label="Name" value={data.name} onChange={(v) => patch({ name: v })} />
       <Field label="Title" value={data.title} onChange={(v) => patch({ title: v })} />
       <Field label="Location" value={data.location} onChange={(v) => patch({ location: v })} />
-      <Field label="Bio" value={data.bio} onChange={(v) => patch({ bio: v })} textarea />
+      <Field label="Bio (one-liner)" value={data.bio} onChange={(v) => patch({ bio: v })} textarea />
+      <Field label="About (long form)" value={data.about} onChange={(v) => patch({ about: v })} textarea rows={6} />
+      <Field label="Avatar URL" value={data.avatar ?? ""} onChange={(v) => patch({ avatar: v })} />
       <Field label="Email" value={data.email} onChange={(v) => patch({ email: v })} />
       <Field label="Website" value={data.website} onChange={(v) => patch({ website: v })} />
       <Field label="GitHub handle" value={data.github} onChange={(v) => patch({ github: v })} />
@@ -218,13 +211,6 @@ function ContentPanel({ data, patch }: { data: PortfolioData; patch: (p: Partial
         blank={{ degree: "", school: "", period: "" }}
       />
       <ListEditor
-        label="Projects"
-        items={data.projects}
-        onChange={(items) => patch({ projects: items })}
-        fields={["name", "description", "url", "language"]}
-        blank={{ name: "", description: "", url: "", language: "" }}
-      />
-      <ListEditor
         label="Links"
         items={data.links}
         onChange={(items) => patch({ links: items })}
@@ -235,9 +221,117 @@ function ContentPanel({ data, patch }: { data: PortfolioData; patch: (p: Partial
   );
 }
 
+function ProjectsPanel({ data, patch }: { data: PortfolioData; patch: (p: Partial<PortfolioData>) => void }) {
+  const projects = data.projects;
+
+  function updateAt(i: number, p: Partial<Project>) {
+    const next = projects.map((x, idx) => (idx === i ? { ...x, ...p } : x));
+    patch({ projects: next });
+  }
+  function removeAt(i: number) {
+    patch({ projects: projects.filter((_, idx) => idx !== i) });
+  }
+  function add() {
+    patch({
+      projects: [
+        ...projects,
+        { name: "New project", description: "", url: "", language: "", image: "", include: true },
+      ],
+    });
+  }
+  function toggleAll(include: boolean) {
+    patch({ projects: projects.map((p) => ({ ...p, include })) });
+  }
+
+  const includedCount = projects.filter((p) => p.include !== false).length;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Projects</div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            {includedCount} of {projects.length} shown
+          </div>
+        </div>
+        <div className="flex gap-1">
+          <button onClick={() => toggleAll(true)} className="rounded-full border border-border px-2 py-1 text-[10px] hover:bg-accent">All</button>
+          <button onClick={() => toggleAll(false)} className="rounded-full border border-border px-2 py-1 text-[10px] hover:bg-accent">None</button>
+          <button onClick={add} className="rounded-full bg-foreground px-2 py-1 text-[10px] text-background">+ Add</button>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {projects.length === 0 && <div className="text-xs text-muted-foreground">No projects yet.</div>}
+        {projects.map((p, i) => {
+          const on = p.include !== false;
+          return (
+            <div
+              key={i}
+              className={`rounded-lg border p-3 transition ${on ? "border-border bg-background" : "border-border bg-muted/40 opacity-60"}`}
+            >
+              <div className="mb-2 flex items-center gap-2">
+                <button
+                  onClick={() => updateAt(i, { include: !on })}
+                  className={`relative h-4 w-7 rounded-full transition ${on ? "bg-foreground" : "bg-muted"}`}
+                  aria-label={on ? "Hide" : "Show"}
+                >
+                  <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-background transition ${on ? "left-3.5" : "left-0.5"}`} />
+                </button>
+                <span className="flex-1 truncate text-xs font-medium">{p.name || "Untitled"}</span>
+                <button onClick={() => removeAt(i)} className="text-[10px] text-destructive hover:underline">
+                  Delete
+                </button>
+              </div>
+              {p.image && (
+                <img
+                  src={p.image}
+                  alt=""
+                  className="mb-2 h-20 w-full rounded border border-border object-cover"
+                  onError={(e) => ((e.currentTarget.style.display = "none"))}
+                />
+              )}
+              <input
+                value={p.name}
+                placeholder="name"
+                onChange={(e) => updateAt(i, { name: e.target.value })}
+                className="mb-1 w-full rounded border border-transparent bg-muted px-2 py-1 text-xs outline-none focus:border-border"
+              />
+              <input
+                value={p.description}
+                placeholder="description"
+                onChange={(e) => updateAt(i, { description: e.target.value })}
+                className="mb-1 w-full rounded border border-transparent bg-muted px-2 py-1 text-xs outline-none focus:border-border"
+              />
+              <input
+                value={p.url}
+                placeholder="url"
+                onChange={(e) => updateAt(i, { url: e.target.value })}
+                className="mb-1 w-full rounded border border-transparent bg-muted px-2 py-1 text-xs outline-none focus:border-border"
+              />
+              <input
+                value={p.image ?? ""}
+                placeholder="image url (auto-filled from GitHub)"
+                onChange={(e) => updateAt(i, { image: e.target.value })}
+                className="mb-1 w-full rounded border border-transparent bg-muted px-2 py-1 text-xs outline-none focus:border-border"
+              />
+              <input
+                value={p.language ?? ""}
+                placeholder="language"
+                onChange={(e) => updateAt(i, { language: e.target.value })}
+                className="w-full rounded border border-transparent bg-muted px-2 py-1 text-xs outline-none focus:border-border"
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function Field({
-  label, value, onChange, textarea,
-}: { label: string; value: string; onChange: (v: string) => void; textarea?: boolean }) {
+  label, value, onChange, textarea, rows = 3,
+}: { label: string; value: string; onChange: (v: string) => void; textarea?: boolean; rows?: number }) {
   return (
     <label className="block">
       <span className="mb-1.5 block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{label}</span>
@@ -245,7 +339,7 @@ function Field({
         <textarea
           value={value ?? ""}
           onChange={(e) => onChange(e.target.value)}
-          rows={3}
+          rows={rows}
           className="w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground"
         />
       ) : (
