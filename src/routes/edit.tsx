@@ -6,7 +6,7 @@ import { buildSite } from "@/lib/templates";
 import type { PortfolioData, Project, TemplateId } from "@/lib/types";
 
 export const Route = createFileRoute("/edit")({
-  head: () => ({ meta: [{ title: "Editor — Monogram" }] }),
+  head: () => ({ meta: [{ title: "Editor — FolioCV" }] }),
   component: Editor,
 });
 
@@ -52,13 +52,13 @@ function Editor() {
     zip.file("styles.css", built.css);
     zip.file(
       "README.md",
-      `# ${data.name} — Portfolio\n\nGenerated with Monogram.\n\n## Run locally\nOpen \`index.html\` in your browser, or serve the folder:\n\n\`\`\`bash\nnpx serve .\n\`\`\`\n\n## Deploy\nDrop the folder on Netlify, Vercel, GitHub Pages, or any static host.\n`
+      `# ${data.name} — Portfolio\n\nGenerated with FolioCV.\n\n## Run locally\nOpen \`index.html\` in your browser, or serve the folder:\n\n\`\`\`bash\nnpx serve .\n\`\`\`\n\n## Deploy\nDrop the folder on Netlify, Vercel, GitHub Pages, or any static host.\n`
     );
     const blob = await zip.generateAsync({ type: "blob" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${(data.name || "portfolio").toLowerCase().replace(/\s+/g, "-")}-monogram.zip`;
+    a.download = `${(data.name || "portfolio").toLowerCase().replace(/\s+/g, "-")}-foliocv.zip`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -71,7 +71,7 @@ function Editor() {
         <div className="flex items-center gap-3">
           <Link to="/" className="flex items-center gap-2">
             <Logo size={22} />
-            <span className="font-serif text-lg">Monogram</span>
+            <span className="font-serif text-lg">FolioCV</span>
           </Link>
           <span className="hidden text-xs text-muted-foreground sm:inline">/ Editing {data.name}</span>
         </div>
@@ -311,7 +311,7 @@ function ProjectsPanel({ data, patch }: { data: PortfolioData; patch: (p: Partia
               />
               <input
                 value={p.image ?? ""}
-                placeholder="image url (auto-filled from GitHub)"
+                placeholder="image url (auto-filled: live site screenshot)"
                 onChange={(e) => updateAt(i, { image: e.target.value })}
                 className="mb-1 w-full rounded border border-transparent bg-muted px-2 py-1 text-xs outline-none focus:border-border"
               />

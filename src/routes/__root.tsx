@@ -10,8 +10,10 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import logoUrl from "../assets/logo.png";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+
+// Inline SVG favicon as data URI — matches the Logo component exactly
+const faviconSvg = `data:image/svg+xml,${encodeURIComponent(`<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" fill="white"><path d="M6 42c0-10 6-18 14-18 5 0 8 3 12 9 4 6 7 9 12 9 8 0 14-8 14-18 0 14-6 24-14 24-5 0-8-3-12-9-4-6-7-9-12-9-8 0-14 8-14 24v-12z"/></svg>`)}`;
 
 function NotFoundComponent() {
   return (
@@ -57,16 +59,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Monogram — Resume to portfolio in seconds" },
+      { title: "FolioCV — Resume to portfolio in seconds" },
       { name: "description", content: "Upload your CV and GitHub. Get a beautiful, editable portfolio site you can download as code. No signup." },
-      { property: "og:title", content: "Monogram" },
+      { property: "og:title", content: "FolioCV" },
       { property: "og:description", content: "Resume + GitHub → minimal portfolio site, yours to download." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", type: "image/png", href: logoUrl },
+      { rel: "icon", type: "image/svg+xml", href: faviconSvg },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {

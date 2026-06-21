@@ -12,6 +12,7 @@ export interface GhRepo {
   name: string;
   description: string | null;
   html_url: string;
+  homepage: string | null;
   stargazers_count: number;
   language: string | null;
   fork: boolean;
@@ -35,4 +36,13 @@ export async function fetchGithub(username: string): Promise<{ user: GhUser; rep
   const user = (await uRes.json()) as GhUser;
   const repos = (await rRes.json()) as GhRepo[];
   return { user, repos };
+}
+
+/**
+ * Returns a URL for a live screenshot of the given URL.
+ * Uses thum.io — free, no API key required.
+ * Falls back to the URL itself so <img> still renders something.
+ */
+export function screenshotUrl(url: string, width = 800, height = 450): string {
+  return `https://image.thum.io/get/width/${width}/crop/${height}/noanimate/${encodeURIComponent(url)}`;
 }

@@ -9,7 +9,7 @@ import type { PortfolioData } from "@/lib/types";
 export const Route = createFileRoute("/create")({
   head: () => ({
     meta: [
-      { title: "Start — Monogram" },
+      { title: "Start — FolioCV" },
       { name: "description", content: "Upload your résumé JSON and GitHub to generate a portfolio." },
     ],
   }),
@@ -52,15 +52,20 @@ function Create() {
           .filter((r) => !r.fork && !r.archived)
           .sort((a, b) => b.stargazers_count - a.stargazers_count)
           .slice(0, 12)
-          .map((r) => ({
-            name: r.name,
-            description: r.description ?? "",
-            url: r.html_url,
-            stars: r.stargazers_count,
-            language: r.language ?? undefined,
-            image: `https://opengraph.githubassets.com/1/${user.login}/${r.name}`,
-            include: true,
-          }));
+          .map((r) => {
+            // Use live site screenshot if homepage exists, otherwise screenshot the GitHub repo page
+            const liveUrl = r.homepage && r.homepage.startsWith("http") ? r.homepage : r.html_url;
+            const image = `https://image.thum.io/get/width/800/crop/450/noanimate/${encodeURIComponent(liveUrl)}`;
+            return {
+              name: r.name,
+              description: r.description ?? "",
+              url: r.homepage && r.homepage.startsWith("http") ? r.homepage : r.html_url,
+              stars: r.stargazers_count,
+              language: r.language ?? undefined,
+              image,
+              include: true,
+            };
+          });
         ghData = {
           github: user.login,
           avatar: user.avatar_url,
@@ -106,7 +111,7 @@ function Create() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "monogram-resume-template.json";
+    a.download = "foliocv-resume-template.json";
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -116,7 +121,7 @@ function Create() {
       <header className="flex items-center justify-between px-6 py-5 sm:px-10">
         <Link to="/" className="flex items-center gap-2">
           <Logo size={26} />
-          <span className="font-serif text-xl">Monogram</span>
+          <span className="font-serif text-xl">FolioCV</span>
         </Link>
         <button onClick={handleSkip} className="text-xs text-muted-foreground hover:text-foreground">
           Skip — start blank
@@ -173,7 +178,7 @@ function Create() {
               className="w-full rounded-xl border border-border bg-card px-5 py-4 text-sm outline-none focus:border-foreground"
             />
             <div className="mt-2 text-xs text-muted-foreground">
-              We'll fetch your top repos and auto-generate a cover image for each project.
+              We'll fetch your top repos and take a live screenshot of each deployed project.
             </div>
           </div>
 
