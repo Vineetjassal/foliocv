@@ -52,7 +52,7 @@ function Editor() {
     zip.file("styles.css", built.css);
     zip.file(
       "README.md",
-      `# ${data.name} — Portfolio\n\nGenerated with FolioCV.\n\n## Run locally\nOpen \`index.html\` in your browser, or serve the folder:\n\n\`\`\`bash\nnpx serve .\n\`\`\`\n\n## Deploy\nDrop the folder on Netlify, Vercel, GitHub Pages, or any static host.\n`
+      `# ${data.name} — Portfolio\n\nGenerated with FolioCV.\n\n## Run locally\nOpen \`index.html\` in your browser, or serve the folder:\n\n\`\`\`bash\nnpx serve .\n\`\`\`\n\n## Deploy\nDrop the folder on Netlify, Vercel, GitHub Pages, or any static host.\n`,
     );
     const blob = await zip.generateAsync({ type: "blob" });
     const url = URL.createObjectURL(blob);
@@ -73,7 +73,9 @@ function Editor() {
             <Logo size={22} />
             <span className="font-serif text-lg">FolioCV</span>
           </Link>
-          <span className="hidden text-xs text-muted-foreground sm:inline">/ Editing {data.name}</span>
+          <span className="hidden text-xs text-muted-foreground sm:inline">
+            / Editing {data.name}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -107,7 +109,9 @@ function Editor() {
           <div className="flex-1 overflow-y-auto p-5">
             {tab === "design" && (
               <div className="space-y-3">
-                <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Template</div>
+                <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                  Template
+                </div>
                 {TEMPLATES.map((t) => (
                   <button
                     key={t.id}
@@ -116,7 +120,9 @@ function Editor() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="font-serif text-lg">{t.name}</div>
-                      <span className="mono text-[10px] text-muted-foreground">0{TEMPLATES.indexOf(t) + 1}</span>
+                      <span className="mono text-[10px] text-muted-foreground">
+                        0{TEMPLATES.indexOf(t) + 1}
+                      </span>
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">{t.tagline}</div>
                     <TemplatePreview id={t.id} />
@@ -178,14 +184,31 @@ function TemplatePreview({ id }: { id: TemplateId }) {
   );
 }
 
-function ContentPanel({ data, patch }: { data: PortfolioData; patch: (p: Partial<PortfolioData>) => void }) {
+function ContentPanel({
+  data,
+  patch,
+}: {
+  data: PortfolioData;
+  patch: (p: Partial<PortfolioData>) => void;
+}) {
   return (
     <div className="space-y-4">
       <Field label="Name" value={data.name} onChange={(v) => patch({ name: v })} />
       <Field label="Title" value={data.title} onChange={(v) => patch({ title: v })} />
       <Field label="Location" value={data.location} onChange={(v) => patch({ location: v })} />
-      <Field label="Bio (one-liner)" value={data.bio} onChange={(v) => patch({ bio: v })} textarea />
-      <Field label="About (long form)" value={data.about} onChange={(v) => patch({ about: v })} textarea rows={6} />
+      <Field
+        label="Bio (one-liner)"
+        value={data.bio}
+        onChange={(v) => patch({ bio: v })}
+        textarea
+      />
+      <Field
+        label="About (long form)"
+        value={data.about}
+        onChange={(v) => patch({ about: v })}
+        textarea
+        rows={6}
+      />
       <Field label="Avatar URL" value={data.avatar ?? ""} onChange={(v) => patch({ avatar: v })} />
       <Field label="Email" value={data.email} onChange={(v) => patch({ email: v })} />
       <Field label="Website" value={data.website} onChange={(v) => patch({ website: v })} />
@@ -193,7 +216,14 @@ function ContentPanel({ data, patch }: { data: PortfolioData; patch: (p: Partial
       <Field
         label="Skills (comma separated)"
         value={data.skills.join(", ")}
-        onChange={(v) => patch({ skills: v.split(",").map((s) => s.trim()).filter(Boolean) })}
+        onChange={(v) =>
+          patch({
+            skills: v
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean),
+          })
+        }
         textarea
       />
       <ListEditor
@@ -221,7 +251,13 @@ function ContentPanel({ data, patch }: { data: PortfolioData; patch: (p: Partial
   );
 }
 
-function ProjectsPanel({ data, patch }: { data: PortfolioData; patch: (p: Partial<PortfolioData>) => void }) {
+function ProjectsPanel({
+  data,
+  patch,
+}: {
+  data: PortfolioData;
+  patch: (p: Partial<PortfolioData>) => void;
+}) {
   const projects = data.projects;
 
   function updateAt(i: number, p: Partial<Project>) {
@@ -255,14 +291,31 @@ function ProjectsPanel({ data, patch }: { data: PortfolioData; patch: (p: Partia
           </div>
         </div>
         <div className="flex gap-1">
-          <button onClick={() => toggleAll(true)} className="rounded-full border border-border px-2 py-1 text-[10px] hover:bg-accent">All</button>
-          <button onClick={() => toggleAll(false)} className="rounded-full border border-border px-2 py-1 text-[10px] hover:bg-accent">None</button>
-          <button onClick={add} className="rounded-full bg-foreground px-2 py-1 text-[10px] text-background">+ Add</button>
+          <button
+            onClick={() => toggleAll(true)}
+            className="rounded-full border border-border px-2 py-1 text-[10px] hover:bg-accent"
+          >
+            All
+          </button>
+          <button
+            onClick={() => toggleAll(false)}
+            className="rounded-full border border-border px-2 py-1 text-[10px] hover:bg-accent"
+          >
+            None
+          </button>
+          <button
+            onClick={add}
+            className="rounded-full bg-foreground px-2 py-1 text-[10px] text-background"
+          >
+            + Add
+          </button>
         </div>
       </div>
 
       <div className="space-y-3">
-        {projects.length === 0 && <div className="text-xs text-muted-foreground">No projects yet.</div>}
+        {projects.length === 0 && (
+          <div className="text-xs text-muted-foreground">No projects yet.</div>
+        )}
         {projects.map((p, i) => {
           const on = p.include !== false;
           return (
@@ -276,10 +329,15 @@ function ProjectsPanel({ data, patch }: { data: PortfolioData; patch: (p: Partia
                   className={`relative h-4 w-7 rounded-full transition ${on ? "bg-foreground" : "bg-muted"}`}
                   aria-label={on ? "Hide" : "Show"}
                 >
-                  <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-background transition ${on ? "left-3.5" : "left-0.5"}`} />
+                  <span
+                    className={`absolute top-0.5 h-3 w-3 rounded-full bg-background transition ${on ? "left-3.5" : "left-0.5"}`}
+                  />
                 </button>
                 <span className="flex-1 truncate text-xs font-medium">{p.name || "Untitled"}</span>
-                <button onClick={() => removeAt(i)} className="text-[10px] text-destructive hover:underline">
+                <button
+                  onClick={() => removeAt(i)}
+                  className="text-[10px] text-destructive hover:underline"
+                >
                   Delete
                 </button>
               </div>
@@ -288,7 +346,7 @@ function ProjectsPanel({ data, patch }: { data: PortfolioData; patch: (p: Partia
                   src={p.image}
                   alt=""
                   className="mb-2 h-20 w-full rounded border border-border object-cover"
-                  onError={(e) => ((e.currentTarget.style.display = "none"))}
+                  onError={(e) => (e.currentTarget.style.display = "none")}
                 />
               )}
               <input
@@ -330,11 +388,23 @@ function ProjectsPanel({ data, patch }: { data: PortfolioData; patch: (p: Partia
 }
 
 function Field({
-  label, value, onChange, textarea, rows = 3,
-}: { label: string; value: string; onChange: (v: string) => void; textarea?: boolean; rows?: number }) {
+  label,
+  value,
+  onChange,
+  textarea,
+  rows = 3,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  textarea?: boolean;
+  rows?: number;
+}) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{label}</span>
+      <span className="mb-1.5 block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+        {label}
+      </span>
       {textarea ? (
         <textarea
           value={value ?? ""}
@@ -354,19 +424,30 @@ function Field({
 }
 
 function ListEditor<T extends Record<string, any>>({
-  label, items, onChange, fields, blank,
+  label,
+  items,
+  onChange,
+  fields,
+  blank,
 }: {
-  label: string; items: T[]; onChange: (items: T[]) => void;
-  fields: (keyof T & string)[]; blank: T;
+  label: string;
+  items: T[];
+  onChange: (items: T[]) => void;
+  fields: (keyof T & string)[];
+  blank: T;
 }) {
   return (
     <div className="rounded-lg border border-border p-3">
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{label}</span>
+        <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+          {label}
+        </span>
         <button
           onClick={() => onChange([...items, { ...blank }])}
           className="rounded-full border border-border px-2 py-0.5 text-[10px] hover:bg-accent"
-        >+ Add</button>
+        >
+          + Add
+        </button>
       </div>
       <div className="space-y-3">
         {items.map((item, i) => (
@@ -387,7 +468,9 @@ function ListEditor<T extends Record<string, any>>({
             <button
               onClick={() => onChange(items.filter((_, idx) => idx !== i))}
               className="mt-1 text-[10px] text-destructive hover:underline"
-            >Remove</button>
+            >
+              Remove
+            </button>
           </div>
         ))}
         {items.length === 0 && <div className="text-xs text-muted-foreground">Nothing yet.</div>}

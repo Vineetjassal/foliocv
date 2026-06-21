@@ -1,12 +1,12 @@
 import type { PortfolioData, TemplateId, Project } from "./types";
 
 const esc = (s: string) =>
-  String(s ?? "").replace(/[&<>"']/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!)
+  String(s ?? "").replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
   );
 
-const visible = (projects: Project[]) =>
-  projects.filter((p) => p.include !== false);
+const visible = (projects: Project[]) => projects.filter((p) => p.include !== false);
 
 const sharedHead = (data: PortfolioData) => `
 <meta charset="UTF-8" />
@@ -191,22 +191,38 @@ function centeredHtml(d: PortfolioData) {
   </div>
   ${d.bio ? `<p class="bio reveal">${esc(d.bio)}</p>` : ""}
   ${d.about ? `<section class="section reveal"><h2>About</h2><p class="about">${esc(d.about)}</p></section>` : ""}
-  ${d.experience.length ? `<section class="section reveal">
+  ${
+    d.experience.length
+      ? `<section class="section reveal">
     <h2>Work</h2>
     ${d.experience.map((e) => `<div class="row"><div><div>${esc(e.role)}</div><div class="desc">${esc(e.company)}${e.description ? ` — ${esc(e.description)}` : ""}</div></div><div class="right mono">${esc(e.period)}</div></div>`).join("")}
-  </section>` : ""}
-  ${projects.length ? `<section class="section reveal">
+  </section>`
+      : ""
+  }
+  ${
+    projects.length
+      ? `<section class="section reveal">
     <h2>Projects</h2>
     ${projects.slice(0, 8).map(projCardCentered).join("")}
-  </section>` : ""}
-  ${d.education.length ? `<section class="section reveal">
+  </section>`
+      : ""
+  }
+  ${
+    d.education.length
+      ? `<section class="section reveal">
     <h2>Education</h2>
     ${d.education.map((e) => `<div class="row"><div><div>${esc(e.degree)}</div><div class="desc">${esc(e.school)}</div></div><div class="right mono">${esc(e.period)}</div></div>`).join("")}
-  </section>` : ""}
-  ${d.skills.length ? `<section class="section reveal">
+  </section>`
+      : ""
+  }
+  ${
+    d.skills.length
+      ? `<section class="section reveal">
     <h2>Skills</h2>
     <div class="skills">${d.skills.map((s) => `<span class="badge">${esc(s)}</span>`).join("")}</div>
-  </section>` : ""}
+  </section>`
+      : ""
+  }
   <section class="section reveal">
     <h2>Elsewhere</h2>
     <div class="links">
@@ -238,22 +254,38 @@ function splitHtml(d: PortfolioData) {
   </aside>
   <main class="main">
     ${d.about ? `<section class="section reveal"><h2 class="serif">About</h2><p class="about">${esc(d.about)}</p></section>` : ""}
-    ${d.experience.length ? `<section class="section reveal">
+    ${
+      d.experience.length
+        ? `<section class="section reveal">
       <h2 class="serif">Experience</h2>
       ${d.experience.map((e) => `<div class="card"><div class="meta mono">${esc(e.period)}</div><div><h4>${esc(e.role)}</h4><div class="sub">${esc(e.company)}</div>${e.description ? `<p>${esc(e.description)}</p>` : ""}</div></div>`).join("")}
-    </section>` : ""}
-    ${projects.length ? `<section class="section reveal">
+    </section>`
+        : ""
+    }
+    ${
+      projects.length
+        ? `<section class="section reveal">
       <h2 class="serif">Projects</h2>
       <div class="proj-grid">${projects.slice(0, 9).map(projCardGrid).join("")}</div>
-    </section>` : ""}
-    ${d.education.length ? `<section class="section reveal">
+    </section>`
+        : ""
+    }
+    ${
+      d.education.length
+        ? `<section class="section reveal">
       <h2 class="serif">Education</h2>
       ${d.education.map((e) => `<div class="card"><div class="meta mono">${esc(e.period)}</div><div><h4>${esc(e.degree)}</h4><div class="sub">${esc(e.school)}</div></div></div>`).join("")}
-    </section>` : ""}
-    ${d.skills.length ? `<section class="section reveal">
+    </section>`
+        : ""
+    }
+    ${
+      d.skills.length
+        ? `<section class="section reveal">
       <h2 class="serif">Skills</h2>
       <div class="skills">${d.skills.map((s) => `<span class="badge">${esc(s)}</span>`).join("")}</div>
-    </section>` : ""}
+    </section>`
+        : ""
+    }
   </main>
 </div>`;
 }
@@ -274,33 +306,59 @@ function editorialHtml(d: PortfolioData) {
     </div>
   </header>
   ${d.about ? `<section class="grid"><h2>About</h2><div><p class="about">${esc(d.about)}</p></div></section>` : ""}
-  ${d.experience.length ? `<section class="grid">
+  ${
+    d.experience.length
+      ? `<section class="grid">
     <h2>Selected<br/>work</h2>
     <div>${d.experience.map((e) => `<div class="entry"><h4>${esc(e.role)} <span class="mono muted"> · ${esc(e.period)}</span></h4><div class="sub">${esc(e.company)}</div>${e.description ? `<p>${esc(e.description)}</p>` : ""}</div>`).join("")}</div>
-  </section>` : ""}
-  ${projects.length ? `<section class="grid">
+  </section>`
+      : ""
+  }
+  ${
+    projects.length
+      ? `<section class="grid">
     <h2>Projects</h2>
     <div class="proj-grid">${projects.slice(0, 12).map(projCardGrid).join("")}</div>
-  </section>` : ""}
-  ${d.education.length ? `<section class="grid">
+  </section>`
+      : ""
+  }
+  ${
+    d.education.length
+      ? `<section class="grid">
     <h2>Education</h2>
     <div>${d.education.map((e) => `<div class="entry"><h4>${esc(e.degree)}</h4><div class="sub">${esc(e.school)} · ${esc(e.period)}</div></div>`).join("")}</div>
-  </section>` : ""}
-  ${d.skills.length ? `<section class="grid">
+  </section>`
+      : ""
+  }
+  ${
+    d.skills.length
+      ? `<section class="grid">
     <h2>Toolkit</h2>
     <div class="skills">${d.skills.map((s) => `<span class="badge">${esc(s)}</span>`).join("")}</div>
-  </section>` : ""}
-  ${d.links.length ? `<section class="grid">
+  </section>`
+      : ""
+  }
+  ${
+    d.links.length
+      ? `<section class="grid">
     <h2>Elsewhere</h2>
     <div>${d.links.map((l) => `<div class="entry"><h4><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a></h4></div>`).join("")}</div>
-  </section>` : ""}
+  </section>`
+      : ""
+  }
 </div>`;
 }
 
-export function buildSite(data: PortfolioData, template: TemplateId): { html: string; css: string } {
+export function buildSite(
+  data: PortfolioData,
+  template: TemplateId,
+): { html: string; css: string } {
   const body =
-    template === "centered" ? centeredHtml(data) :
-    template === "split" ? splitHtml(data) : editorialHtml(data);
+    template === "centered"
+      ? centeredHtml(data)
+      : template === "split"
+        ? splitHtml(data)
+        : editorialHtml(data);
   const html = `<!doctype html>
 <html lang="en">
 <head>${sharedHead(data)}${sharedThemeScript}</head>

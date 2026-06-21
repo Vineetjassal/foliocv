@@ -34,10 +34,11 @@ export const useStore = create<State>()(
       data: null,
       template: "centered",
       setData: (data) => set({ data }),
-      patch: (p) => set((s) => ({ data: s.data ? { ...s.data, ...p } : { ...emptyPortfolio, ...p } })),
+      patch: (p) =>
+        set((s) => ({ data: s.data ? { ...s.data, ...p } : { ...emptyPortfolio, ...p } })),
       setTemplate: (template) => set({ template }),
       reset: () => set({ data: null }),
     }),
-    { name: "monogram-portfolio" }
-  )
+    { name: "monogram-portfolio" },
+  ),
 );

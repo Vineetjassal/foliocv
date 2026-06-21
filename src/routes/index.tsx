@@ -6,9 +6,17 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "FolioCV — Resume to portfolio, in seconds" },
-      { name: "description", content: "Upload your résumé JSON and GitHub. Get a beautiful, editable portfolio site you can download as code." },
+      {
+        name: "description",
+        content:
+          "Upload your résumé JSON and GitHub. Get a beautiful, editable portfolio site you can download as code.",
+      },
       { property: "og:title", content: "FolioCV — Resume to portfolio" },
-      { property: "og:description", content: "Upload your résumé JSON and GitHub. Get a beautiful, editable portfolio site you can download as code." },
+      {
+        property: "og:description",
+        content:
+          "Upload your résumé JSON and GitHub. Get a beautiful, editable portfolio site you can download as code.",
+      },
     ],
   }),
   component: Landing,
@@ -61,11 +69,18 @@ function Landing() {
         const swap = () => {
           if (!wordRef.current) return;
           gsap.to(wordRef.current, {
-            yPercent: -110, opacity: 0, duration: 0.38, ease: "power2.in",
+            yPercent: -110,
+            opacity: 0,
+            duration: 0.38,
+            ease: "power2.in",
             onComplete: () => {
               i = (i + 1) % words.length;
               if (wordRef.current) wordRef.current.textContent = words[i];
-              gsap.fromTo(wordRef.current, { yPercent: 110, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.48, ease: "power2.out" });
+              gsap.fromTo(
+                wordRef.current,
+                { yPercent: 110, opacity: 0 },
+                { yPercent: 0, opacity: 1, duration: 0.48, ease: "power2.out" },
+              );
             },
           });
         };
@@ -83,18 +98,24 @@ function Landing() {
             }
           });
         },
-        { threshold: 0.15 }
+        { threshold: 0.15 },
       );
       document.querySelectorAll(".scroll-reveal").forEach((el) => {
         gsap.set(el, { opacity: 0, y: 32 });
         io.observe(el);
       });
     })();
-    return () => { killed = true; ctx?.revert(); };
+    return () => {
+      killed = true;
+      ctx?.revert();
+    };
   }, []);
 
   return (
-    <div ref={heroRef} className="min-h-screen grain relative overflow-hidden bg-background text-foreground">
+    <div
+      ref={heroRef}
+      className="min-h-screen grain relative overflow-hidden bg-background text-foreground"
+    >
       {/* ── Nav ── */}
       <header className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-6 py-5 sm:px-10">
         <div className="flex items-center gap-2 m-fade">
@@ -129,15 +150,17 @@ function Landing() {
         <h1 className="m-fade font-serif text-5xl leading-[1.05] text-balance sm:text-7xl">
           Turn your{" "}
           <span className="inline-block overflow-hidden align-baseline">
-            <span ref={wordRef} className="inline-block italic">resume.</span>
+            <span ref={wordRef} className="inline-block italic">
+              resume.
+            </span>
           </span>
           <br />
           into a portfolio.
         </h1>
 
         <p className="m-fade mt-6 max-w-xl text-balance text-muted-foreground text-lg">
-          Drop a résumé JSON, paste your GitHub handle. FolioCV crafts a quiet, beautiful
-          portfolio you can tweak inline and download as plain HTML.
+          Drop a résumé JSON, paste your GitHub handle. FolioCV crafts a quiet, beautiful portfolio
+          you can tweak inline and download as plain HTML.
         </p>
 
         <div className="m-fade mt-10 flex flex-wrap items-center justify-center gap-3">
@@ -147,17 +170,31 @@ function Landing() {
           >
             Build mine →
           </Link>
-          <a href="#how" className="rounded-full border border-border px-8 py-3.5 text-sm hover:bg-accent transition-colors">
+          <a
+            href="#how"
+            className="rounded-full border border-border px-8 py-3.5 text-sm hover:bg-accent transition-colors"
+          >
             How it works
           </a>
         </div>
 
         {/* Social proof */}
         <div className="m-fade mt-12 flex flex-wrap items-center justify-center gap-6 text-xs text-muted-foreground">
-          {["No account needed", "100% browser-based", "Download clean code", "Dark mode included"].map((f) => (
+          {[
+            "No account needed",
+            "100% browser-based",
+            "Download clean code",
+            "Dark mode included",
+          ].map((f) => (
             <span key={f} className="flex items-center gap-1.5">
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M2 6l2.5 2.5L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <path
+                  d="M2 6l2.5 2.5L10 4"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
               {f}
             </span>
@@ -168,7 +205,9 @@ function Landing() {
       {/* ── How it works ── */}
       <section id="how" className="mx-auto max-w-4xl px-6 py-24 sm:py-32">
         <div className="scroll-reveal mb-12 text-center">
-          <div className="mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">Simple process</div>
+          <div className="mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            Simple process
+          </div>
           <h2 className="font-serif text-4xl sm:text-5xl">Three steps to live</h2>
         </div>
 
@@ -196,7 +235,17 @@ function Landing() {
             <div key={s.n} className="bg-background p-8">
               <div className="mb-5 flex items-center gap-3">
                 <span className="mono text-xs text-muted-foreground">{s.n}</span>
-                <svg className="text-muted-foreground" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  className="text-muted-foreground"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <path d={s.icon} />
                 </svg>
               </div>
@@ -210,7 +259,9 @@ function Landing() {
       {/* ── Templates preview ── */}
       <section className="mx-auto max-w-4xl px-6 pb-24 sm:pb-32">
         <div className="scroll-reveal mb-12 text-center">
-          <div className="mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">Templates</div>
+          <div className="mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            Templates
+          </div>
           <h2 className="font-serif text-4xl sm:text-5xl">Three minimal styles</h2>
           <p className="mt-4 text-muted-foreground max-w-md mx-auto">
             Every template ships with a light/dark toggle and clean, semantic HTML you can extend.
@@ -226,10 +277,14 @@ function Landing() {
               key={t.name}
               className="group relative overflow-hidden rounded-2xl border border-border bg-card p-6 transition hover:border-foreground/40"
             >
-              <div className={`mb-4 h-32 w-full rounded-xl bg-gradient-to-b ${t.color} to-transparent opacity-60`} />
+              <div
+                className={`mb-4 h-32 w-full rounded-xl bg-gradient-to-b ${t.color} to-transparent opacity-60`}
+              />
               <div className="font-serif text-xl">{t.name}</div>
               <div className="mt-1 text-sm text-muted-foreground">{t.desc}</div>
-              <div className="mt-4 text-xs text-muted-foreground group-hover:text-foreground transition-colors">Preview in editor →</div>
+              <div className="mt-4 text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+                Preview in editor →
+              </div>
             </div>
           ))}
         </div>
@@ -239,7 +294,9 @@ function Landing() {
       <section className="border-t border-border">
         <div className="mx-auto max-w-4xl px-6 py-24 sm:py-32">
           <div className="scroll-reveal mb-16 text-center">
-            <div className="mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">Why FolioCV</div>
+            <div className="mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              Why FolioCV
+            </div>
             <h2 className="font-serif text-4xl sm:text-5xl">Built different</h2>
           </div>
           <div className="scroll-reveal grid grid-cols-1 gap-8 sm:grid-cols-2">
@@ -301,10 +358,13 @@ function Landing() {
         <div className="mx-auto max-w-3xl px-6 py-24 sm:py-32 text-center">
           <div className="scroll-reveal">
             <h2 className="font-serif text-5xl sm:text-6xl text-balance">
-              Your portfolio,<br/>in five minutes.
+              Your portfolio,
+              <br />
+              in five minutes.
             </h2>
             <p className="mt-6 text-muted-foreground max-w-md mx-auto">
-              No account. No templates to pay for. Just a quiet, beautiful portfolio that's entirely yours.
+              No account. No templates to pay for. Just a quiet, beautiful portfolio that's entirely
+              yours.
             </p>
             <Link
               to="/create"

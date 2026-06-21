@@ -10,7 +10,10 @@ export const Route = createFileRoute("/create")({
   head: () => ({
     meta: [
       { title: "Start — FolioCV" },
-      { name: "description", content: "Upload your résumé JSON and GitHub to generate a portfolio." },
+      {
+        name: "description",
+        content: "Upload your résumé JSON and GitHub to generate a portfolio.",
+      },
     ],
   }),
   component: Create,
@@ -39,12 +42,14 @@ function Create() {
         try {
           json = JSON.parse(text);
         } catch {
-          throw new Error("That file isn't valid JSON. Download the template below for the right shape.");
+          throw new Error(
+            "That file isn't valid JSON. Download the template below for the right shape.",
+          );
         }
         parsed = parseResumeJson(json);
       }
       let ghData: Partial<PortfolioData> = {};
-      const ghHandle = gh.trim() ? extractUsername(gh) : parsed.github ?? "";
+      const ghHandle = gh.trim() ? extractUsername(gh) : (parsed.github ?? "");
       if (ghHandle) {
         setStep("Fetching GitHub…");
         const { user, repos } = await fetchGithub(ghHandle);
@@ -101,13 +106,16 @@ function Create() {
       name: "Your Name",
       title: "Designer & Developer",
       bio: "A short paragraph about who you are and what you build.",
-      about: "Tell visitors a bit more about your background, what you care about, and what you're working on now.",
+      about:
+        "Tell visitors a bit more about your background, what you care about, and what you're working on now.",
     });
     navigate({ to: "/edit" });
   }
 
   function downloadTemplate() {
-    const blob = new Blob([JSON.stringify(sampleResumeJson, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(sampleResumeJson, null, 2)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -123,21 +131,29 @@ function Create() {
           <Logo size={26} />
           <span className="font-serif text-xl">FolioCV</span>
         </Link>
-        <button onClick={handleSkip} className="text-xs text-muted-foreground hover:text-foreground">
+        <button
+          onClick={handleSkip}
+          className="text-xs text-muted-foreground hover:text-foreground"
+        >
           Skip — start blank
         </button>
       </header>
       <main className="mx-auto max-w-xl px-6 pb-24 pt-16">
-        <div className="mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">Step 1 of 2</div>
+        <div className="mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+          Step 1 of 2
+        </div>
         <h1 className="font-serif text-4xl">Tell us about you</h1>
         <p className="mt-3 text-sm text-muted-foreground">
-          Upload a résumé JSON file and/or paste a GitHub handle. Everything is processed in your browser.
+          Upload a résumé JSON file and/or paste a GitHub handle. Everything is processed in your
+          browser.
         </p>
 
         <form onSubmit={handleSubmit} className="mt-10 space-y-6">
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <label className="block text-xs uppercase tracking-[0.18em] text-muted-foreground">Résumé JSON</label>
+              <label className="block text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                Résumé JSON
+              </label>
               <button
                 type="button"
                 onClick={downloadTemplate}
@@ -154,7 +170,9 @@ function Create() {
               <div>
                 <div className="text-sm">{file ? file.name : "Drop or choose a JSON file"}</div>
                 <div className="mt-1 text-xs text-muted-foreground">
-                  {file ? `${(file.size / 1024).toFixed(1)} KB` : "JSON Resume schema or simple flat shape"}
+                  {file
+                    ? `${(file.size / 1024).toFixed(1)} KB`
+                    : "JSON Resume schema or simple flat shape"}
                 </div>
               </div>
               <div className="rounded-full border border-border px-3 py-1 text-xs">Browse</div>
@@ -169,7 +187,9 @@ function Create() {
           </div>
 
           <div>
-            <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-muted-foreground">GitHub</label>
+            <label className="mb-2 block text-xs uppercase tracking-[0.18em] text-muted-foreground">
+              GitHub
+            </label>
             <input
               type="text"
               placeholder="github.com/yourname  or  yourname"
