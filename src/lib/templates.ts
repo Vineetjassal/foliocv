@@ -1,9 +1,12 @@
-import type { PortfolioData, TemplateId } from "./types";
+import type { PortfolioData, TemplateId, Project } from "./types";
 
 const esc = (s: string) =>
   String(s ?? "").replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!)
   );
+
+const visible = (projects: Project[]) =>
+  projects.filter((p) => p.include !== false);
 
 const sharedHead = (data: PortfolioData) => `
 <meta charset="UTF-8" />
@@ -33,7 +36,6 @@ const themeToggle = `
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
 </button>`;
 
-/* ---------- CSS (shared base) ---------- */
 const baseCss = `
 :root {
   --bg: #0a0a0a; --fg: #f5f5f5; --muted: #8a8a8a; --border: #1f1f1f; --card: #111;
@@ -57,10 +59,7 @@ a:hover { border-color: var(--fg); }
   transition: transform .2s;
 }
 .theme-toggle:hover { transform: scale(1.06); }
-.badge {
-  display: inline-block; padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px;
-  font-size: 0.75rem; color: var(--muted);
-}
+.badge { display: inline-block; padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px; font-size: 0.75rem; color: var(--muted); }
 .reveal { opacity: 0; transform: translateY(12px); animation: reveal .7s ease forwards; }
 @keyframes reveal { to { opacity: 1; transform: none; } }
 .reveal:nth-child(2) { animation-delay: .08s; }
@@ -76,12 +75,20 @@ const templateCss: Record<TemplateId, string> = {
 h1.name { font-size: 2.2rem; letter-spacing: -0.02em; font-weight: 500; }
 .title { color: var(--muted); margin-top: 6px; }
 .bio { margin-top: 28px; font-size: 1.05rem; line-height: 1.6; color: var(--fg); }
+.about { margin-top: 16px; font-size: 1rem; line-height: 1.7; color: var(--muted); white-space: pre-wrap; }
 .section { margin-top: 56px; }
 .section h2 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); margin-bottom: 18px; font-weight: 500; }
 .row { display: flex; justify-content: space-between; gap: 16px; padding: 14px 0; border-top: 1px solid var(--border); }
 .row:last-child { border-bottom: 1px solid var(--border); }
 .row .right { color: var(--muted); font-size: 0.9rem; white-space: nowrap; }
 .row .desc { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
+.proj-card { display: flex; gap: 16px; padding: 16px 0; border-top: 1px solid var(--border); align-items: flex-start; }
+.proj-card:last-child { border-bottom: 1px solid var(--border); }
+.proj-card img { width: 120px; height: 72px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); flex-shrink: 0; background: var(--card); }
+.proj-card .body { flex: 1; min-width: 0; }
+.proj-card .body a { border-bottom: none; }
+.proj-card .body p { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
+.proj-card .meta { color: var(--muted); font-size: 0.78rem; margin-top: 6px; font-family: 'JetBrains Mono', monospace; }
 .skills { display: flex; flex-wrap: wrap; gap: 8px; }
 .links { display: flex; flex-wrap: wrap; gap: 8px 18px; }
 .links a { border-bottom: none; color: var(--muted); }
@@ -89,8 +96,8 @@ h1.name { font-size: 2.2rem; letter-spacing: -0.02em; font-weight: 500; }
 `,
   split: `
 .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
-.sidebar { padding: 56px 32px; border-right: 1px solid var(--border); position: sticky; top: 0; height: 100vh; }
-.main { padding: 56px 56px 96px; max-width: 720px; }
+.sidebar { padding: 56px 32px; border-right: 1px solid var(--border); position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+.main { padding: 56px 56px 96px; max-width: 760px; }
 .avatar { width: 84px; height: 84px; border-radius: 12px; object-fit: cover; margin-bottom: 20px; border: 1px solid var(--border); }
 h1.name { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.01em; }
 .title { color: var(--muted); margin-top: 4px; font-size: 0.95rem; }
@@ -100,12 +107,21 @@ h1.name { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.01em; }
 .side-section a { display: block; border-bottom: none; padding: 4px 0; color: var(--fg); font-size: 0.9rem; }
 .section { margin-bottom: 56px; }
 .section h2 { font-size: 1.6rem; font-weight: 500; letter-spacing: -0.01em; margin-bottom: 24px; }
+.about { font-size: 1rem; line-height: 1.7; color: var(--muted); white-space: pre-wrap; }
 .card { padding: 20px 0; border-top: 1px solid var(--border); display: grid; grid-template-columns: 120px 1fr; gap: 24px; }
 .card:last-child { border-bottom: 1px solid var(--border); }
 .card .meta { color: var(--muted); font-size: 0.85rem; }
 .card h4 { font-weight: 500; font-size: 1rem; }
 .card .sub { color: var(--muted); font-size: 0.9rem; margin-top: 2px; }
 .card p { color: var(--muted); font-size: 0.9rem; margin-top: 8px; line-height: 1.55; }
+.proj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+.proj { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; transition: border-color .2s, transform .2s; display: block; }
+.proj:hover { border-color: var(--fg); transform: translateY(-2px); }
+.proj img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; background: var(--card); border-bottom: 1px solid var(--border); }
+.proj .body { padding: 14px; }
+.proj h5 { font-weight: 500; font-size: 0.95rem; }
+.proj p { color: var(--muted); font-size: 0.85rem; margin-top: 6px; }
+.proj .row { display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.72rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
 .skills { display: flex; flex-wrap: wrap; gap: 8px; }
 @media (max-width: 800px) {
   .layout { grid-template-columns: 1fr; }
@@ -124,25 +140,49 @@ h1.name { font-family: 'Instrument Serif', Georgia, serif; font-size: clamp(3rem
 .meta-row { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 28px; color: var(--muted); font-size: 0.85rem; }
 .grid { display: grid; grid-template-columns: 200px 1fr; gap: 56px; padding: 56px 0; border-bottom: 1px solid var(--border); }
 .grid h2 { font-family: 'Instrument Serif', Georgia, serif; font-size: 1.8rem; font-weight: 400; }
+.about { font-size: 1.05rem; line-height: 1.75; white-space: pre-wrap; }
 .entry { padding: 14px 0; }
 .entry + .entry { border-top: 1px solid var(--border); }
 .entry h4 { font-size: 1.05rem; font-weight: 500; }
 .entry .sub { color: var(--muted); font-size: 0.9rem; margin-top: 2px; }
 .entry p { color: var(--muted); font-size: 0.92rem; margin-top: 8px; line-height: 1.55; }
-.proj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
-.proj { border: 1px solid var(--border); padding: 18px; border-radius: 10px; transition: border-color .2s, transform .2s; }
+.proj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
+.proj { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; transition: border-color .2s, transform .2s; display: block; }
 .proj:hover { border-color: var(--fg); transform: translateY(-2px); }
+.proj img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; background: var(--card); border-bottom: 1px solid var(--border); }
+.proj .body { padding: 16px; }
 .proj h5 { font-weight: 500; font-size: 0.95rem; }
 .proj p { color: var(--muted); font-size: 0.85rem; margin-top: 6px; min-height: 40px; }
-.proj .row { display: flex; justify-content: space-between; margin-top: 14px; font-size: 0.75rem; color: var(--muted); }
+.proj .row { display: flex; justify-content: space-between; margin-top: 12px; font-size: 0.72rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
 .skills { display: flex; flex-wrap: wrap; gap: 8px; }
 @media (max-width: 760px) { .grid { grid-template-columns: 1fr; gap: 20px; padding: 40px 0; } }
 `,
 };
 
-/* ---------- Template HTML generators ---------- */
+function projCardCentered(p: Project) {
+  return `<div class="proj-card">
+    ${p.image ? `<img loading="lazy" src="${esc(p.image)}" alt="${esc(p.name)}" onerror="this.style.display='none'" />` : ""}
+    <div class="body">
+      <a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.name)}</a>
+      ${p.description ? `<p>${esc(p.description)}</p>` : ""}
+      <div class="meta">${p.language ? esc(p.language) : ""}${p.stars ? `  ★ ${p.stars}` : ""}</div>
+    </div>
+  </div>`;
+}
+
+function projCardGrid(p: Project) {
+  return `<a class="proj" href="${esc(p.url)}" target="_blank" rel="noopener">
+    ${p.image ? `<img loading="lazy" src="${esc(p.image)}" alt="${esc(p.name)}" onerror="this.style.display='none'" />` : ""}
+    <div class="body">
+      <h5>${esc(p.name)}</h5>
+      ${p.description ? `<p>${esc(p.description)}</p>` : ""}
+      <div class="row"><span>${p.language ? esc(p.language) : ""}</span><span>${p.stars ? `★ ${p.stars}` : ""}</span></div>
+    </div>
+  </a>`;
+}
 
 function centeredHtml(d: PortfolioData) {
+  const projects = visible(d.projects);
   return `<div class="wrap">
   ${d.avatar ? `<img class="avatar reveal" src="${esc(d.avatar)}" alt="${esc(d.name)}" />` : ""}
   <div class="reveal">
@@ -150,13 +190,14 @@ function centeredHtml(d: PortfolioData) {
     <div class="title">${esc(d.title)}${d.location ? ` · ${esc(d.location)}` : ""}</div>
   </div>
   ${d.bio ? `<p class="bio reveal">${esc(d.bio)}</p>` : ""}
+  ${d.about ? `<section class="section reveal"><h2>About</h2><p class="about">${esc(d.about)}</p></section>` : ""}
   ${d.experience.length ? `<section class="section reveal">
     <h2>Work</h2>
     ${d.experience.map((e) => `<div class="row"><div><div>${esc(e.role)}</div><div class="desc">${esc(e.company)}${e.description ? ` — ${esc(e.description)}` : ""}</div></div><div class="right mono">${esc(e.period)}</div></div>`).join("")}
   </section>` : ""}
-  ${d.projects.length ? `<section class="section reveal">
+  ${projects.length ? `<section class="section reveal">
     <h2>Projects</h2>
-    ${d.projects.slice(0, 6).map((p) => `<div class="row"><div><div><a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.name)}</a></div><div class="desc">${esc(p.description ?? "")}</div></div><div class="right mono">${p.language ? esc(p.language) : ""}${p.stars ? `  ★${p.stars}` : ""}</div></div>`).join("")}
+    ${projects.slice(0, 8).map(projCardCentered).join("")}
   </section>` : ""}
   ${d.education.length ? `<section class="section reveal">
     <h2>Education</h2>
@@ -179,6 +220,7 @@ function centeredHtml(d: PortfolioData) {
 }
 
 function splitHtml(d: PortfolioData) {
+  const projects = visible(d.projects);
   return `<div class="layout">
   <aside class="sidebar">
     ${d.avatar ? `<img class="avatar" src="${esc(d.avatar)}" alt="${esc(d.name)}" />` : ""}
@@ -195,13 +237,14 @@ function splitHtml(d: PortfolioData) {
     </div>
   </aside>
   <main class="main">
+    ${d.about ? `<section class="section reveal"><h2 class="serif">About</h2><p class="about">${esc(d.about)}</p></section>` : ""}
     ${d.experience.length ? `<section class="section reveal">
       <h2 class="serif">Experience</h2>
       ${d.experience.map((e) => `<div class="card"><div class="meta mono">${esc(e.period)}</div><div><h4>${esc(e.role)}</h4><div class="sub">${esc(e.company)}</div>${e.description ? `<p>${esc(e.description)}</p>` : ""}</div></div>`).join("")}
     </section>` : ""}
-    ${d.projects.length ? `<section class="section reveal">
+    ${projects.length ? `<section class="section reveal">
       <h2 class="serif">Projects</h2>
-      ${d.projects.slice(0, 8).map((p) => `<div class="card"><div class="meta mono">${p.language ? esc(p.language) : ""}${p.stars ? ` · ★${p.stars}` : ""}</div><div><h4><a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.name)}</a></h4>${p.description ? `<p>${esc(p.description)}</p>` : ""}</div></div>`).join("")}
+      <div class="proj-grid">${projects.slice(0, 9).map(projCardGrid).join("")}</div>
     </section>` : ""}
     ${d.education.length ? `<section class="section reveal">
       <h2 class="serif">Education</h2>
@@ -216,6 +259,7 @@ function splitHtml(d: PortfolioData) {
 }
 
 function editorialHtml(d: PortfolioData) {
+  const projects = visible(d.projects);
   return `<div class="wrap">
   <header class="hero">
     <div class="eyebrow reveal">Portfolio · ${new Date().getFullYear()}</div>
@@ -229,13 +273,14 @@ function editorialHtml(d: PortfolioData) {
       ${d.website ? `<a href="${esc(d.website)}" target="_blank" rel="noopener">${esc(d.website)}</a>` : ""}
     </div>
   </header>
+  ${d.about ? `<section class="grid"><h2>About</h2><div><p class="about">${esc(d.about)}</p></div></section>` : ""}
   ${d.experience.length ? `<section class="grid">
     <h2>Selected<br/>work</h2>
     <div>${d.experience.map((e) => `<div class="entry"><h4>${esc(e.role)} <span class="mono muted"> · ${esc(e.period)}</span></h4><div class="sub">${esc(e.company)}</div>${e.description ? `<p>${esc(e.description)}</p>` : ""}</div>`).join("")}</div>
   </section>` : ""}
-  ${d.projects.length ? `<section class="grid">
+  ${projects.length ? `<section class="grid">
     <h2>Projects</h2>
-    <div class="proj-grid">${d.projects.slice(0, 9).map((p) => `<a class="proj" href="${esc(p.url)}" target="_blank" rel="noopener"><h5>${esc(p.name)}</h5><p>${esc(p.description ?? "")}</p><div class="row"><span>${p.language ? esc(p.language) : ""}</span><span>${p.stars ? `★ ${p.stars}` : ""}</span></div></a>`).join("")}</div>
+    <div class="proj-grid">${projects.slice(0, 12).map(projCardGrid).join("")}</div>
   </section>` : ""}
   ${d.education.length ? `<section class="grid">
     <h2>Education</h2>
