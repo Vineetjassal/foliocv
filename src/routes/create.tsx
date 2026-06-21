@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useRef } from "react";
-import logoAsset from "@/assets/logo.png.asset.json";
+import logoUrl from "@/assets/logo.png";
 import { extractPdfText, parseResumeText } from "@/lib/parseResume";
 import { extractUsername, fetchGithub } from "@/lib/github";
 import { useStore, emptyPortfolio } from "@/lib/store";
@@ -90,7 +90,7 @@ function Create() {
     <div className="min-h-screen grain">
       <header className="flex items-center justify-between px-6 py-5 sm:px-10">
         <Link to="/" className="flex items-center gap-2">
-          <img src={logoAsset.url} alt="" className="h-7 w-7" />
+          <img src={logoUrl} alt="" className="h-7 w-7" />
           <span className="font-serif text-xl">Monogram</span>
         </Link>
         <button onClick={handleSkip} className="text-xs text-muted-foreground hover:text-foreground">

@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import logoAsset from "@/assets/logo.png.asset.json";
+import logoUrl from "@/assets/logo.png";
 import { useStore } from "@/lib/store";
 import { buildSite } from "@/lib/templates";
 import type { PortfolioData, TemplateId } from "@/lib/types";
@@ -76,7 +76,7 @@ function Editor() {
       <header className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-3">
           <Link to="/" className="flex items-center gap-2">
-            <img src={logoAsset.url} alt="" className="h-6 w-6" />
+            <img src={logoUrl} alt="" className="h-6 w-6" />
             <span className="font-serif text-lg">Monogram</span>
           </Link>
           <span className="hidden text-xs text-muted-foreground sm:inline">/ Editing {data.name}</span>

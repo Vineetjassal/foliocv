@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
-import logoAsset from "@/assets/logo.png.asset.json";
+import logoUrl from "@/assets/logo.png";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -51,7 +51,7 @@ function Landing() {
     <div ref={heroRef} className="min-h-screen grain relative overflow-hidden">
       <header className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-6 py-5 sm:px-10">
         <div className="flex items-center gap-2 m-fade">
-          <img src={logoAsset.url} alt="Monogram" className="h-7 w-7" />
+          <img src={logoUrl} alt="Monogram" className="h-7 w-7" />
           <span className="font-serif text-xl">Monogram</span>
         </div>
         <nav className="flex items-center gap-2 text-sm m-fade">
@@ -63,7 +63,7 @@ function Landing() {
       </header>
 
       <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center px-6 text-center">
-        <img src={logoAsset.url} alt="" className="m-logo mb-8 h-16 w-16" />
+        <img src={logoUrl} alt="" className="m-logo mb-8 h-16 w-16" />
         <div className="m-fade mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">
           Portfolio builder · No signup
         </div>
