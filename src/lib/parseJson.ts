@@ -1,5 +1,13 @@
 import type { PortfolioData } from "./types";
 
+/** Coerce any value to a clean string[]. Handles arrays, comma strings, booleans, undefined. */
+function normalizeSkills(raw: any): string[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.map(String).filter(Boolean);
+  if (typeof raw === "string") return raw.split(",").map((s) => s.trim()).filter(Boolean);
+  return [];
+}
+
 /**
  * A flexible JSON resume parser. Accepts either the popular
  * jsonresume.org schema or a simple flat shape.
@@ -23,10 +31,12 @@ export function parseResumeJson(raw: any): Partial<PortfolioData> {
       github:
         (b.profiles ?? []).find((p: any) => /github/i.test(p.network ?? ""))?.username ?? "",
       avatar: b.image ?? "",
-      skills: (raw.skills ?? [])
-        .flatMap((s: any) => (s.keywords?.length ? s.keywords : [s.name]))
-        .filter(Boolean)
-        .slice(0, 24),
+      skills: normalizeSkills(
+        (raw.skills ?? [])
+          .flatMap((s: any) => (s.keywords?.length ? s.keywords : [s.name]))
+          .filter(Boolean)
+          .slice(0, 24)
+      ),
       experience: (raw.work ?? []).map((w: any) => ({
         role: w.position ?? w.role ?? "",
         company: w.name ?? w.company ?? "",
@@ -63,7 +73,7 @@ export function parseResumeJson(raw: any): Partial<PortfolioData> {
     website: raw.website ?? raw.url,
     github: raw.github,
     avatar: raw.avatar,
-    skills: raw.skills ?? [],
+    skills: normalizeSkills(raw.skills),
     experience: raw.experience ?? raw.work ?? [],
     education: raw.education ?? [],
     projects: (raw.projects ?? []).map((p: any) => ({ include: true, ...p })),
