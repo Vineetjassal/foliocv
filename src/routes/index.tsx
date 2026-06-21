@@ -6,11 +6,11 @@ export const Route = createFileRoute('/')({ component: Landing });
 
 const faqs = [
   { q: 'Is it really free?', a: 'Yes. No signup, no credit card, no paywalls. FolioCV runs entirely in your browser — nothing is sent to a server.' },
-  { q: 'What format does the JSON need to be?', a: 'We support the popular jsonresume.org schema out-of-the-box. You can also download our simple flat template if you\'re starting from scratch.' },
-  { q: 'How are my GitHub projects shown?', a: 'FolioCV fetches your top public repositories and takes a live screenshot of each project\'s deployed site. No more generic GitHub social previews.' },
+  { q: 'What format does the JSON need to be?', a: "We support the popular jsonresume.org schema out-of-the-box. You can also download our simple flat template if you're starting from scratch." },
+  { q: 'How are my GitHub projects shown?', a: "FolioCV fetches your top public repositories and takes a live screenshot of each project's deployed site. No more generic GitHub social previews." },
   { q: 'Can I edit the portfolio after generating?', a: 'Absolutely. The editor lets you tweak every field inline — name, bio, projects, skills, experience — and toggle which projects appear.' },
   { q: 'What do I get when I download?', a: 'A clean zip of static HTML, CSS & JS you own outright. Drop it on Netlify, GitHub Pages, or any host. No lock-in.' },
-  { q: 'Does it support dark mode?', a: 'Every generated portfolio ships with a light/dark toggle that respects the visitor\'s system preference.' },
+  { q: 'Does it support dark mode?', a: "Every generated portfolio ships with a light/dark toggle that respects the visitor's system preference." },
 ];
 
 function Landing() {
@@ -76,13 +76,23 @@ function Landing() {
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
           Portfolio builder · No signup required
         </div>
+
         <h1 className="m-fade font-serif text-5xl leading-[1.05] text-balance sm:text-7xl">
           Turn your{' '}
-          <span className="inline-block overflow-hidden align-baseline">
-            <span ref={wordRef} className="inline-block italic">resume.</span>
+          <span
+            style={{
+              display: 'inline-block',
+              overflow: 'hidden',
+              verticalAlign: 'bottom',
+              lineHeight: 'inherit',
+              height: '1.05em',
+            }}
+          >
+            <span ref={wordRef} style={{ display: 'inline-block' }} className="italic">resume.</span>
           </span>
           <br />into a portfolio.
         </h1>
+
         <p className="m-fade mt-6 max-w-xl text-balance text-muted-foreground text-lg">
           Drop a résumé JSON, paste your GitHub handle. FolioCV crafts a quiet, beautiful portfolio you can tweak inline and download as plain HTML.
         </p>
