@@ -8,6 +8,115 @@ const esc = (s: string) =>
 const visible = (projects: Project[]) =>
   projects.filter((p) => p.include !== false);
 
+/** Merge legacy p.image into p.images array */
+function allMedia(p: Project): { type: 'img' | 'video'; src: string }[] {
+  const imgs: string[] = p.images?.length ? p.images : p.image ? [p.image] : [];
+  const vids: string[] = p.videos ?? [];
+  return [
+    ...imgs.map(src => ({ type: 'img' as const, src })),
+    ...vids.map(src => ({ type: 'video' as const, src })),
+  ];
+}
+
+/** Returns true if the string looks like a YouTube URL */
+function isYouTube(url: string) {
+  return /youtu\.be\/|youtube\.com\/watch/.test(url);
+}
+
+function youTubeEmbed(url: string) {
+  // Convert watch?v=ID or youtu.be/ID to embed URL
+  const m = url.match(/(?:v=|youtu\.be\/)([\w-]+)/);
+  return m ? `https://www.youtube.com/embed/${m[1]}?rel=0` : url;
+}
+
+/** Inline JS for carousel — injected once into the page */
+const carouselScript = `
+<script>
+(function(){
+  function initCarousels() {
+    document.querySelectorAll('.carousel').forEach(function(el) {
+      var slides = el.querySelectorAll('.c-slide');
+      var dots = el.querySelectorAll('.c-dot');
+      var idx = 0;
+      if (slides.length < 2) return;
+      function go(n) {
+        slides[idx].classList.remove('active');
+        if(dots[idx]) dots[idx].classList.remove('active');
+        idx = (n + slides.length) % slides.length;
+        slides[idx].classList.add('active');
+        if(dots[idx]) dots[idx].classList.add('active');
+      }
+      el.querySelector('.c-prev')?.addEventListener('click', function(e){ e.preventDefault(); go(idx-1); });
+      el.querySelector('.c-next')?.addEventListener('click', function(e){ e.preventDefault(); go(idx+1); });
+      dots.forEach(function(d,i){ d.addEventListener('click', function(){ go(i); }); });
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCarousels);
+  } else {
+    initCarousels();
+  }
+})();
+</script>`;
+
+/** CSS for carousel — added to baseCss */
+const carouselCss = `
+.carousel { position: relative; width: 100%; overflow: hidden; background: var(--card); }
+.c-slide { display: none; }
+.c-slide.active { display: block; }
+.c-slide img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; background: var(--card); }
+.c-slide video { width: 100%; aspect-ratio: 16/9; display: block; background: #000; }
+.c-slide iframe { width: 100%; aspect-ratio: 16/9; display: block; border: none; }
+.c-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,.55); color: #fff; border: none; cursor: pointer; border-radius: 999px; width: 28px; height: 28px; display: grid; place-items: center; font-size: 14px; z-index: 2; }
+.c-prev { left: 8px; }
+.c-next { right: 8px; }
+.c-dots { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; z-index: 2; }
+.c-dot { width: 6px; height: 6px; border-radius: 999px; background: rgba(255,255,255,.35); cursor: pointer; border: none; padding: 0; transition: background .2s; }
+.c-dot.active { background: rgba(255,255,255,.9); }
+.proj-links { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.proj-links a { font-size: 0.75rem; padding: 3px 10px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); transition: border-color .2s, color .2s; }
+.proj-links a:hover { color: var(--fg); border-color: var(--fg); }
+`;
+
+/** Build a carousel HTML block for a project */
+function carouselHtml(p: Project): string {
+  const media = allMedia(p);
+  if (media.length === 0) return '';
+
+  const slideHtml = media.map((m, i) => {
+    let inner = '';
+    if (m.type === 'video') {
+      if (isYouTube(m.src)) {
+        inner = `<iframe src="${esc(youTubeEmbed(m.src))}" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>`;
+      } else {
+        inner = `<video controls preload="none" src="${esc(m.src)}"></video>`;
+      }
+    } else {
+      inner = `<img loading="lazy" src="${esc(m.src)}" alt="${esc(p.name)} screenshot ${i+1}" onerror="this.parentElement.style.display='none'" />`;
+    }
+    return `<div class="c-slide${i === 0 ? ' active' : ''}">${inner}</div>`;
+  }).join('');
+
+  const arrows = media.length > 1
+    ? `<button class="c-nav c-prev" aria-label="Previous">&#8249;</button>
+       <button class="c-nav c-next" aria-label="Next">&#8250;</button>`
+    : '';
+
+  const dotsHtml = media.length > 1
+    ? `<div class="c-dots">${media.map((_, i) => `<button class="c-dot${i === 0 ? ' active' : ''}" aria-label="Slide ${i+1}"></button>`).join('')}</div>`
+    : '';
+
+  return `<div class="carousel">${slideHtml}${arrows}${dotsHtml}</div>`;
+}
+
+/** Project links row */
+function projLinks(p: Project): string {
+  const links: string[] = [];
+  if (p.url?.startsWith('http')) links.push(`<a href="${esc(p.url)}" target="_blank" rel="noopener">&nearr; Live</a>`);
+  if (p.githubUrl?.startsWith('http')) links.push(`<a href="${esc(p.githubUrl)}" target="_blank" rel="noopener">&equiv; GitHub</a>`);
+  return links.length ? `<div class="proj-links">${links.join('')}</div>` : '';
+}
+
 const sharedHead = (data: PortfolioData) => `
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -66,7 +175,7 @@ a:hover { border-color: var(--fg); }
 .reveal:nth-child(3) { animation-delay: .16s; }
 .reveal:nth-child(4) { animation-delay: .24s; }
 .reveal:nth-child(5) { animation-delay: .32s; }
-`;
+${carouselCss}`;
 
 const templateCss: Record<TemplateId, string> = {
   centered: `
@@ -82,11 +191,11 @@ h1.name { font-size: 2.2rem; letter-spacing: -0.02em; font-weight: 500; }
 .row:last-child { border-bottom: 1px solid var(--border); }
 .row .right { color: var(--muted); font-size: 0.9rem; white-space: nowrap; }
 .row .desc { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
-.proj-card { display: flex; gap: 16px; padding: 16px 0; border-top: 1px solid var(--border); align-items: flex-start; }
+.proj-card { padding: 18px 0; border-top: 1px solid var(--border); }
 .proj-card:last-child { border-bottom: 1px solid var(--border); }
-.proj-card img { width: 120px; height: 72px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); flex-shrink: 0; background: var(--card); }
-.proj-card .body { flex: 1; min-width: 0; }
-.proj-card .body a { border-bottom: none; }
+.proj-card .carousel { border-radius: 8px; overflow: hidden; margin-bottom: 12px; border: 1px solid var(--border); }
+.proj-card .body a { font-weight: 500; border-bottom: none; }
+.proj-card .body a:hover { border-bottom: 1px solid var(--fg); }
 .proj-card .body p { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
 .proj-card .meta { color: var(--muted); font-size: 0.78rem; margin-top: 6px; font-family: 'JetBrains Mono', monospace; }
 .skills { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -117,11 +226,11 @@ h1.name { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.01em; }
 .proj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
 .proj { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; transition: border-color .2s, transform .2s; display: block; }
 .proj:hover { border-color: var(--fg); transform: translateY(-2px); }
-.proj img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; background: var(--card); border-bottom: 1px solid var(--border); }
+.proj .carousel { border-bottom: 1px solid var(--border); }
 .proj .body { padding: 14px; }
 .proj h5 { font-weight: 500; font-size: 0.95rem; }
 .proj p { color: var(--muted); font-size: 0.85rem; margin-top: 6px; }
-.proj .row { display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.72rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+.proj .row { display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.72rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; border: none; padding: 0; }
 .skills { display: flex; flex-wrap: wrap; gap: 8px; }
 @media (max-width: 800px) {
   .layout { grid-template-columns: 1fr; }
@@ -149,37 +258,44 @@ h1.name { font-family: 'Instrument Serif', Georgia, serif; font-size: clamp(3rem
 .proj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
 .proj { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; transition: border-color .2s, transform .2s; display: block; }
 .proj:hover { border-color: var(--fg); transform: translateY(-2px); }
-.proj img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; background: var(--card); border-bottom: 1px solid var(--border); }
+.proj .carousel { border-bottom: 1px solid var(--border); }
 .proj .body { padding: 16px; }
 .proj h5 { font-weight: 500; font-size: 0.95rem; }
 .proj p { color: var(--muted); font-size: 0.85rem; margin-top: 6px; min-height: 40px; }
-.proj .row { display: flex; justify-content: space-between; margin-top: 12px; font-size: 0.72rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+.proj .row { display: flex; justify-content: space-between; margin-top: 12px; font-size: 0.72rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; border: none; padding: 0; }
 .skills { display: flex; flex-wrap: wrap; gap: 8px; }
 @media (max-width: 760px) { .grid { grid-template-columns: 1fr; gap: 20px; padding: 40px 0; } }
 `,
 };
 
+// ── Project card builders using carousel ─────────────────────────────────────
+
 function projCardCentered(p: Project) {
+  const media = allMedia(p);
   return `<div class="proj-card">
-    ${p.image ? `<img loading="lazy" src="${esc(p.image)}" alt="${esc(p.name)}" onerror="this.style.display='none'" />` : ""}
+    ${carouselHtml(p)}
     <div class="body">
       <a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.name)}</a>
       ${p.description ? `<p>${esc(p.description)}</p>` : ""}
       <div class="meta">${p.language ? esc(p.language) : ""}${p.stars ? `  ★ ${p.stars}` : ""}</div>
+      ${projLinks(p)}
     </div>
   </div>`;
 }
 
 function projCardGrid(p: Project) {
-  return `<a class="proj" href="${esc(p.url)}" target="_blank" rel="noopener">
-    ${p.image ? `<img loading="lazy" src="${esc(p.image)}" alt="${esc(p.name)}" onerror="this.style.display='none'" />` : ""}
+  return `<div class="proj">
+    ${carouselHtml(p)}
     <div class="body">
       <h5>${esc(p.name)}</h5>
       ${p.description ? `<p>${esc(p.description)}</p>` : ""}
       <div class="row"><span>${p.language ? esc(p.language) : ""}</span><span>${p.stars ? `★ ${p.stars}` : ""}</span></div>
+      ${projLinks(p)}
     </div>
-  </a>`;
+  </div>`;
 }
+
+// ── Template HTML builders ────────────────────────────────────────────────────
 
 function centeredHtml(d: PortfolioData) {
   const projects = visible(d.projects);
@@ -307,6 +423,7 @@ export function buildSite(data: PortfolioData, template: TemplateId): { html: st
 <body>
 ${themeToggle}
 ${body}
+${carouselScript}
 </body>
 </html>`;
   const css = baseCss + templateCss[template];
