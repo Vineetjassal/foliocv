@@ -69,7 +69,7 @@ function Landing() {
     <div ref={heroRef} className="min-h-screen relative overflow-hidden bg-background text-foreground">
       <header className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-6 py-5 sm:px-10">
         <div className="flex items-center gap-2 m-fade">
-          <Logo size={26} />
+          <Logo size={40} />
           <span className="font-serif text-xl tracking-tight">FolioCV</span>
         </div>
         <nav className="flex items-center gap-2 text-sm m-fade">
@@ -153,13 +153,11 @@ function Landing() {
           <div className="scroll-reveal relative overflow-hidden rounded-3xl border border-border bg-card p-8 sm:p-12">
             <div aria-hidden className="pointer-events-none absolute -top-32 -right-32 h-80 w-80 rounded-full" style={{background: 'radial-gradient(circle, oklch(0.65 0.2 340 / 0.12), transparent 70%)'}} />
             <div aria-hidden className="pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full" style={{background: 'radial-gradient(circle, oklch(0.6 0.18 260 / 0.08), transparent 70%)'}} />
-
             <div className="relative">
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-background/60 px-4 py-1.5 text-xs uppercase tracking-[0.2em] text-muted-foreground backdrop-blur-sm">
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-pink-500 animate-pulse" />
                 Also by Vineet Jassal
               </div>
-
               <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 sm:gap-16 items-center">
                 <div>
                   <div className="flex items-center gap-3 mb-4">
@@ -176,27 +174,17 @@ function Landing() {
                     Browse beautiful bento-grid developer profiles, swipe on the engineers and designers who match your vibe, and find your next co-founder. Built with React 19, Supabase, and a liquid-glass UI.
                   </p>
                   <div className="flex flex-wrap gap-3">
-                    <a
-                      href="https://trybondr.app"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-2.5 text-sm font-medium text-background transition-transform hover:scale-[1.02] active:scale-[0.98]"
-                    >
+                    <a href="https://trybondr.app" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-2.5 text-sm font-medium text-background transition-transform hover:scale-[1.02] active:scale-[0.98]">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                       trybondr.app
                     </a>
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-2.5 text-xs text-muted-foreground">
-                      Private beta
-                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-2.5 text-xs text-muted-foreground">Private beta</span>
                   </div>
                 </div>
-
                 <div className="grid grid-cols-2 gap-3">
                   {bondrFeatures.map((f) => (
                     <div key={f.label} className="flex flex-col gap-3 rounded-2xl border border-border bg-background/60 p-5 backdrop-blur-sm">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
-                        <path d={f.icon} />
-                      </svg>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground"><path d={f.icon} /></svg>
                       <span className="text-sm font-medium">{f.label}</span>
                     </div>
                   ))}
@@ -270,7 +258,7 @@ function Landing() {
       {/* FOOTER */}
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-8 text-xs text-muted-foreground">
-          <div className="flex items-center gap-2"><Logo size={18} /><span>FolioCV</span></div>
+          <div className="flex items-center gap-2"><Logo size={28} /><span>FolioCV</span></div>
           <div className="flex items-center gap-4">
             <span>Made with care · No accounts, no tracking</span>
             <a href="https://github.com/vineetjassal" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">@vineetjassal</a>
