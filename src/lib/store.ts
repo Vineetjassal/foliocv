@@ -18,13 +18,6 @@ export const emptyPortfolio: PortfolioData = {
   links: [],
 };
 
-/** Coerce skills to string[] defensively at store level */
-function safeSkills(s: any): string[] {
-  if (Array.isArray(s)) return s.map(String).filter(Boolean);
-  if (typeof s === 'string') return s.split(',').map((x) => x.trim()).filter(Boolean);
-  return [];
-}
-
 interface Store {
   data: PortfolioData | null;
   template: TemplateId;
@@ -36,12 +29,11 @@ interface Store {
 export const useStore = create<Store>((set) => ({
   data: null,
   template: 'centered',
-  setData: (d) => set({ data: { ...d, skills: safeSkills(d.skills) } }),
+  setData: (d) => set({ data: d }),
+  // patch NEVER touches skills unless caller explicitly includes it
   patch: (p) =>
     set((s) => ({
-      data: s.data
-        ? { ...s.data, ...p, skills: safeSkills(p.skills ?? s.data.skills) }
-        : s.data,
+      data: s.data ? { ...s.data, ...p } : s.data,
     })),
   setTemplate: (t) => set({ template: t }),
 }));
