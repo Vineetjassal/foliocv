@@ -13,6 +13,13 @@ const faqs = [
   { q: 'Does it support dark mode?', a: "Every generated portfolio ships with a light/dark toggle that respects the visitor's system preference." },
 ];
 
+const bondrFeatures = [
+  { icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z', label: 'Swipe-to-match' },
+  { icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z', label: 'Bento profiles' },
+  { icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', label: 'Verified badges' },
+  { icon: 'M15 10l4.553-2.069A1 1 0 0121 8.868V15.13a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z', label: 'Video intros' },
+];
+
 function Landing() {
   const heroRef = useRef<HTMLDivElement>(null);
   const wordRef = useRef<HTMLSpanElement>(null);
@@ -71,28 +78,19 @@ function Landing() {
         </nav>
       </header>
 
+      {/* HERO */}
       <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center px-6 text-center pt-24">
         <div className="m-fade mb-4 inline-flex items-center gap-2 rounded-full border border-border px-4 py-1.5 text-xs uppercase tracking-[0.2em] text-muted-foreground">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
           Portfolio builder · No signup required
         </div>
-
         <h1 className="m-fade font-serif text-5xl leading-[1.05] text-balance sm:text-7xl">
           Turn your{' '}
-          <span
-            style={{
-              display: 'inline-block',
-              overflow: 'hidden',
-              verticalAlign: 'bottom',
-              lineHeight: 'inherit',
-              height: '1.05em',
-            }}
-          >
+          <span style={{ display: 'inline-block', overflow: 'hidden', verticalAlign: 'bottom', lineHeight: 'inherit', height: '1.05em' }}>
             <span ref={wordRef} style={{ display: 'inline-block' }} className="italic">resume.</span>
           </span>
           <br />into a portfolio.
         </h1>
-
         <p className="m-fade mt-6 max-w-xl text-balance text-muted-foreground text-lg">
           Drop a résumé JSON, paste your GitHub handle. FolioCV crafts a quiet, beautiful portfolio you can tweak inline and download as plain HTML.
         </p>
@@ -110,6 +108,7 @@ function Landing() {
         </div>
       </main>
 
+      {/* HOW IT WORKS */}
       <section id="how" className="mx-auto max-w-4xl px-6 py-24 sm:py-32">
         <div className="scroll-reveal mb-12 text-center">
           <div className="mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">Simple process</div>
@@ -129,6 +128,7 @@ function Landing() {
         </div>
       </section>
 
+      {/* TEMPLATES */}
       <section className="mx-auto max-w-4xl px-6 pb-24 sm:pb-32">
         <div className="scroll-reveal mb-12 text-center">
           <div className="mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">Templates</div>
@@ -147,6 +147,82 @@ function Landing() {
         </div>
       </section>
 
+      {/* BONDR ADVERTISEMENT */}
+      <section className="border-t border-border">
+        <div className="mx-auto max-w-4xl px-6 py-24 sm:py-32">
+          <div className="scroll-reveal relative overflow-hidden rounded-3xl border border-border bg-card p-8 sm:p-12">
+            {/* ambient glow */}
+            <div aria-hidden className="pointer-events-none absolute -top-32 -right-32 h-80 w-80 rounded-full" style={{background: 'radial-gradient(circle, oklch(0.65 0.2 340 / 0.12), transparent 70%)'}} />
+            <div aria-hidden className="pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full" style={{background: 'radial-gradient(circle, oklch(0.6 0.18 260 / 0.08), transparent 70%)'}} />
+
+            <div className="relative">
+              {/* eyebrow */}
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-background/60 px-4 py-1.5 text-xs uppercase tracking-[0.2em] text-muted-foreground backdrop-blur-sm">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-pink-500 animate-pulse" />
+                Also by Vineet Jassal
+              </div>
+
+              <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 sm:gap-16 items-center">
+                {/* left: copy */}
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    {/* Bondr heart-link logo */}
+                    <svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-label="Bondr logo">
+                      <rect width="36" height="36" rx="10" fill="oklch(0.55 0.22 340)" />
+                      <path d="M18 27s-9-5.5-9-12a5 5 0 0110 0 5 5 0 0110 0c0 6.5-11 12-11 12z" fill="white" opacity="0.9"/>
+                      <circle cx="23" cy="14" r="1.5" fill="oklch(0.55 0.22 340)" />
+                    </svg>
+                    <span className="font-serif text-3xl tracking-tight">Bondr</span>
+                  </div>
+                  <p className="text-lg text-muted-foreground leading-relaxed mb-2">
+                    <span className="text-foreground font-medium">Hinge, but for builders.</span>
+                  </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed mb-8">
+                    Browse beautiful bento-grid developer profiles, swipe on the engineers and designers who match your vibe, and find your next co-founder. Built with React 19, Supabase, and a liquid-glass UI.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <a
+                      href="https://github.com/Vineetjassal/Bondr"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-2.5 text-sm font-medium text-background transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+                      View on GitHub
+                    </a>
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-2.5 text-xs text-muted-foreground">
+                      Private beta
+                    </span>
+                  </div>
+                </div>
+
+                {/* right: feature pills bento */}
+                <div className="grid grid-cols-2 gap-3">
+                  {bondrFeatures.map((f) => (
+                    <div key={f.label} className="flex flex-col gap-3 rounded-2xl border border-border bg-background/60 p-5 backdrop-blur-sm">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
+                        <path d={f.icon} />
+                      </svg>
+                      <span className="text-sm font-medium">{f.label}</span>
+                    </div>
+                  ))}
+                  {/* stack tag */}
+                  <div className="col-span-2 rounded-2xl border border-border bg-background/60 p-4 backdrop-blur-sm">
+                    <div className="text-xs text-muted-foreground mb-2 uppercase tracking-wider">Stack</div>
+                    <div className="flex flex-wrap gap-2">
+                      {['React 19', 'Supabase', 'TanStack Router', 'Tailwind v4'].map((t) => (
+                        <span key={t} className="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground">{t}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FEATURES */}
       <section className="border-t border-border">
         <div className="mx-auto max-w-4xl px-6 py-24 sm:py-32">
           <div className="scroll-reveal mb-16 text-center">
@@ -164,6 +240,7 @@ function Landing() {
         </div>
       </section>
 
+      {/* FAQ */}
       <section className="border-t border-border" id="faq">
         <div className="mx-auto max-w-2xl px-6 py-24 sm:py-32">
           <div className="scroll-reveal mb-16 text-center">
@@ -186,6 +263,7 @@ function Landing() {
         </div>
       </section>
 
+      {/* FINAL CTA */}
       <section className="border-t border-border">
         <div className="mx-auto max-w-3xl px-6 py-24 sm:py-32 text-center">
           <div className="scroll-reveal">
@@ -196,6 +274,7 @@ function Landing() {
         </div>
       </section>
 
+      {/* FOOTER */}
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-8 text-xs text-muted-foreground">
           <div className="flex items-center gap-2"><Logo size={18} /><span>FolioCV</span></div>
