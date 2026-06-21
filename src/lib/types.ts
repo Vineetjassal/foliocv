@@ -2,9 +2,11 @@ export interface Project {
   name: string;
   description: string;
   url: string;
+  githubUrl?: string;
   stars?: number;
   language?: string;
   image?: string;
+  images?: string[]; // carousel
   include?: boolean;
 }
 

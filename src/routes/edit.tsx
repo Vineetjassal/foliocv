@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { useStore } from "@/lib/store";
 import { buildSite } from "@/lib/templates";
+import { enhanceBio } from "@/lib/aiBio";
+import { screenshotUrl } from "@/lib/github";
 import type { PortfolioData, Project, TemplateId } from "@/lib/types";
 
 export const Route = createFileRoute("/edit")({
@@ -92,13 +94,15 @@ function Editor() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        <aside className="flex w-[360px] shrink-0 flex-col border-r border-border bg-card">
+        <aside className="flex w-[380px] shrink-0 flex-col border-r border-border bg-card">
           <div className="flex border-b border-border text-xs">
             {(["design", "content", "projects"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`flex-1 py-3 capitalize transition ${tab === t ? "bg-background text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                className={`flex-1 py-3 capitalize transition ${
+                  tab === t ? "bg-background text-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
               >
                 {t}
               </button>
@@ -112,7 +116,11 @@ function Editor() {
                   <button
                     key={t.id}
                     onClick={() => setTemplate(t.id)}
-                    className={`w-full rounded-xl border p-4 text-left transition ${template === t.id ? "border-foreground bg-accent" : "border-border hover:border-muted-foreground"}`}
+                    className={`w-full rounded-xl border p-4 text-left transition ${
+                      template === t.id
+                        ? "border-foreground bg-accent"
+                        : "border-border hover:border-muted-foreground"
+                    }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="font-serif text-lg">{t.name}</div>
@@ -178,49 +186,242 @@ function TemplatePreview({ id }: { id: TemplateId }) {
   );
 }
 
+// ── AI Bio Writer ────────────────────────────────────────────────────────────
+function AiBioButton({
+  value, name, title, onResult,
+}: { value: string; name: string; title: string; onResult: (v: string) => void }) {
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState('');
+
+  async function run() {
+    if (!value.trim()) { setStatus('Write a few words first'); return; }
+    setLoading(true);
+    setStatus('Thinking…');
+    try {
+      const result = await enhanceBio(value, name, title);
+      onResult(result);
+      setStatus('✓ Done');
+    } catch {
+      setStatus('Could not enhance — try again');
+    } finally {
+      setLoading(false);
+      setTimeout(() => setStatus(''), 3000);
+    }
+  }
+
+  return (
+    <div className="mt-1.5 flex items-center gap-2">
+      <button
+        type="button"
+        onClick={run}
+        disabled={loading}
+        className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1 text-[10px] uppercase tracking-[0.15em] text-muted-foreground transition hover:border-foreground hover:text-foreground disabled:opacity-50"
+      >
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+        </svg>
+        {loading ? 'Enhancing…' : 'Enhance with AI'}
+      </button>
+      {status && <span className="text-[10px] text-muted-foreground">{status}</span>}
+    </div>
+  );
+}
+
+// ── Content Panel ────────────────────────────────────────────────────────────
 function ContentPanel({ data, patch }: { data: PortfolioData; patch: (p: Partial<PortfolioData>) => void }) {
   return (
     <div className="space-y-4">
       <Field label="Name" value={data.name} onChange={(v) => patch({ name: v })} />
       <Field label="Title" value={data.title} onChange={(v) => patch({ title: v })} />
       <Field label="Location" value={data.location} onChange={(v) => patch({ location: v })} />
-      <Field label="Bio (one-liner)" value={data.bio} onChange={(v) => patch({ bio: v })} textarea />
-      <Field label="About (long form)" value={data.about} onChange={(v) => patch({ about: v })} textarea rows={6} />
-      <Field label="Avatar URL" value={data.avatar ?? ""} onChange={(v) => patch({ avatar: v })} />
+
+      {/* Bio with AI */}
+      <div>
+        <label className="block">
+          <span className="mb-1.5 block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Bio (one-liner)</span>
+          <textarea
+            value={data.bio ?? ''}
+            onChange={(e) => patch({ bio: e.target.value })}
+            rows={2}
+            className="w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground"
+          />
+        </label>
+        <AiBioButton value={data.bio} name={data.name} title={data.title} onResult={(v) => patch({ bio: v })} />
+      </div>
+
+      {/* About with AI */}
+      <div>
+        <label className="block">
+          <span className="mb-1.5 block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">About (long form)</span>
+          <textarea
+            value={data.about ?? ''}
+            onChange={(e) => patch({ about: e.target.value })}
+            rows={5}
+            className="w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground"
+          />
+        </label>
+        <AiBioButton value={data.about} name={data.name} title={data.title} onResult={(v) => patch({ about: v })} />
+      </div>
+
+      <Field label="Avatar URL" value={data.avatar ?? ''} onChange={(v) => patch({ avatar: v })} />
       <Field label="Email" value={data.email} onChange={(v) => patch({ email: v })} />
       <Field label="Website" value={data.website} onChange={(v) => patch({ website: v })} />
       <Field label="GitHub handle" value={data.github} onChange={(v) => patch({ github: v })} />
       <Field
         label="Skills (comma separated)"
-        value={data.skills.join(", ")}
-        onChange={(v) => patch({ skills: v.split(",").map((s) => s.trim()).filter(Boolean) })}
+        value={data.skills.join(', ')}
+        onChange={(v) => patch({ skills: v.split(',').map((s) => s.trim()).filter(Boolean) })}
         textarea
       />
       <ListEditor
         label="Experience"
         items={data.experience}
         onChange={(items) => patch({ experience: items })}
-        fields={["role", "company", "period", "description"]}
-        blank={{ role: "", company: "", period: "", description: "" }}
+        fields={['role', 'company', 'period', 'description']}
+        blank={{ role: '', company: '', period: '', description: '' }}
       />
       <ListEditor
         label="Education"
         items={data.education}
         onChange={(items) => patch({ education: items })}
-        fields={["degree", "school", "period"]}
-        blank={{ degree: "", school: "", period: "" }}
+        fields={['degree', 'school', 'period']}
+        blank={{ degree: '', school: '', period: '' }}
       />
       <ListEditor
         label="Links"
         items={data.links}
         onChange={(items) => patch({ links: items })}
-        fields={["label", "url"]}
-        blank={{ label: "", url: "" }}
+        fields={['label', 'url']}
+        blank={{ label: '', url: '' }}
       />
     </div>
   );
 }
 
+// ── Image Carousel Editor ────────────────────────────────────────────────────
+function ImageCarousel({
+  images, liveUrl, ghUrl, onChange,
+}: {
+  images: string[];
+  liveUrl: string;
+  ghUrl?: string;
+  onChange: (imgs: string[]) => void;
+}) {
+  const [idx, setIdx] = useState(0);
+  const [adding, setAdding] = useState(false);
+  const [newUrl, setNewUrl] = useState('');
+  const [capturing, setCapturing] = useState(false);
+
+  const all = images.length > 0 ? images : [];
+  const current = all[Math.min(idx, all.length - 1)];
+
+  function prev() { setIdx((i) => (i - 1 + all.length) % all.length); }
+  function next() { setIdx((i) => (i + 1) % all.length); }
+
+  function addUrl() {
+    if (!newUrl.trim()) return;
+    const next = [...all, newUrl.trim()];
+    onChange(next);
+    setIdx(next.length - 1);
+    setNewUrl('');
+    setAdding(false);
+  }
+
+  function removeCurrentImage() {
+    const next = all.filter((_, i) => i !== idx);
+    onChange(next);
+    setIdx(Math.max(0, idx - 1));
+  }
+
+  async function captureScreenshot() {
+    const target = liveUrl?.startsWith('http') ? liveUrl : ghUrl ?? '';
+    if (!target) return;
+    setCapturing(true);
+    const ss = screenshotUrl(target);
+    const next = [...all, ss];
+    onChange(next);
+    setIdx(next.length - 1);
+    setCapturing(false);
+  }
+
+  return (
+    <div className="space-y-2">
+      {/* Carousel viewer */}
+      {all.length > 0 ? (
+        <div className="relative overflow-hidden rounded-lg border border-border bg-muted">
+          <img
+            src={current}
+            alt="Project screenshot"
+            className="h-36 w-full object-cover"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+          />
+          {all.length > 1 && (
+            <>
+              <button onClick={prev} className="absolute left-1 top-1/2 -translate-y-1/2 rounded-full bg-black/50 px-2 py-0.5 text-[10px] text-white">‹</button>
+              <button onClick={next} className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full bg-black/50 px-2 py-0.5 text-[10px] text-white">›</button>
+            </>
+          )}
+          <div className="absolute bottom-1 right-1 flex gap-1">
+            {all.map((_, i) => (
+              <span key={i} className={`inline-block h-1.5 w-1.5 rounded-full ${i === idx ? 'bg-white' : 'bg-white/40'}`} />
+            ))}
+          </div>
+          <button
+            onClick={removeCurrentImage}
+            className="absolute right-1 top-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[9px] text-red-400"
+          >✕</button>
+        </div>
+      ) : (
+        <div className="flex h-24 items-center justify-center rounded-lg border border-dashed border-border bg-muted/40 text-[10px] text-muted-foreground">
+          No images yet
+        </div>
+      )}
+
+      {/* Action row */}
+      <div className="flex flex-wrap gap-1">
+        <button
+          onClick={captureScreenshot}
+          disabled={capturing || (!liveUrl && !ghUrl)}
+          className="rounded-full border border-border px-2.5 py-1 text-[10px] hover:bg-accent disabled:opacity-40"
+        >
+          {capturing ? 'Capturing…' : '📸 Screenshot site'}
+        </button>
+        <button
+          onClick={() => setAdding((a) => !a)}
+          className="rounded-full border border-border px-2.5 py-1 text-[10px] hover:bg-accent"
+        >
+          + Add URL
+        </button>
+        {liveUrl?.startsWith('http') && (
+          <a href={liveUrl} target="_blank" rel="noopener noreferrer"
+            className="rounded-full border border-border px-2.5 py-1 text-[10px] hover:bg-accent"
+          >↗ Live site</a>
+        )}
+        {ghUrl?.startsWith('http') && (
+          <a href={ghUrl} target="_blank" rel="noopener noreferrer"
+            className="rounded-full border border-border px-2.5 py-1 text-[10px] hover:bg-accent"
+          >⌥ GitHub repo</a>
+        )}
+      </div>
+
+      {adding && (
+        <div className="flex gap-1">
+          <input
+            autoFocus
+            value={newUrl}
+            onChange={(e) => setNewUrl(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addUrl()}
+            placeholder="https://i.imgur.com/..."
+            className="flex-1 rounded border border-border bg-muted px-2 py-1 text-[10px] outline-none focus:border-foreground"
+          />
+          <button onClick={addUrl} className="rounded border border-border px-2 text-[10px] hover:bg-accent">Add</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Projects Panel ───────────────────────────────────────────────────────────
 function ProjectsPanel({ data, patch }: { data: PortfolioData; patch: (p: Partial<PortfolioData>) => void }) {
   const projects = data.projects;
 
@@ -235,7 +436,7 @@ function ProjectsPanel({ data, patch }: { data: PortfolioData; patch: (p: Partia
     patch({
       projects: [
         ...projects,
-        { name: "New project", description: "", url: "", language: "", image: "", include: true },
+        { name: 'New project', description: '', url: '', githubUrl: '', language: '', image: '', images: [], include: true },
       ],
     });
   }
@@ -261,66 +462,51 @@ function ProjectsPanel({ data, patch }: { data: PortfolioData; patch: (p: Partia
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {projects.length === 0 && <div className="text-xs text-muted-foreground">No projects yet.</div>}
         {projects.map((p, i) => {
           const on = p.include !== false;
+          const allImgs = p.images?.length ? p.images : p.image ? [p.image] : [];
           return (
             <div
               key={i}
-              className={`rounded-lg border p-3 transition ${on ? "border-border bg-background" : "border-border bg-muted/40 opacity-60"}`}
+              className={`rounded-xl border p-3 transition ${
+                on ? 'border-border bg-background' : 'border-border bg-muted/40 opacity-60'
+              }`}
             >
-              <div className="mb-2 flex items-center gap-2">
+              {/* Toggle + name row */}
+              <div className="mb-3 flex items-center gap-2">
                 <button
                   onClick={() => updateAt(i, { include: !on })}
-                  className={`relative h-4 w-7 rounded-full transition ${on ? "bg-foreground" : "bg-muted"}`}
-                  aria-label={on ? "Hide" : "Show"}
+                  className={`relative h-4 w-7 shrink-0 rounded-full transition ${
+                    on ? 'bg-foreground' : 'bg-muted'
+                  }`}
+                  aria-label={on ? 'Hide' : 'Show'}
                 >
-                  <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-background transition ${on ? "left-3.5" : "left-0.5"}`} />
+                  <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-background transition ${
+                    on ? 'left-3.5' : 'left-0.5'
+                  }`} />
                 </button>
-                <span className="flex-1 truncate text-xs font-medium">{p.name || "Untitled"}</span>
-                <button onClick={() => removeAt(i)} className="text-[10px] text-destructive hover:underline">
-                  Delete
-                </button>
+                <span className="flex-1 truncate text-xs font-medium">{p.name || 'Untitled'}</span>
+                <button onClick={() => removeAt(i)} className="text-[10px] text-destructive hover:underline">Delete</button>
               </div>
-              {p.image && (
-                <img
-                  src={p.image}
-                  alt=""
-                  className="mb-2 h-20 w-full rounded border border-border object-cover"
-                  onError={(e) => ((e.currentTarget.style.display = "none"))}
-                />
-              )}
-              <input
-                value={p.name}
-                placeholder="name"
-                onChange={(e) => updateAt(i, { name: e.target.value })}
-                className="mb-1 w-full rounded border border-transparent bg-muted px-2 py-1 text-xs outline-none focus:border-border"
+
+              {/* Image carousel */}
+              <ImageCarousel
+                images={allImgs}
+                liveUrl={p.url}
+                ghUrl={p.githubUrl}
+                onChange={(imgs) => updateAt(i, { images: imgs, image: imgs[0] ?? '' })}
               />
-              <input
-                value={p.description}
-                placeholder="description"
-                onChange={(e) => updateAt(i, { description: e.target.value })}
-                className="mb-1 w-full rounded border border-transparent bg-muted px-2 py-1 text-xs outline-none focus:border-border"
-              />
-              <input
-                value={p.url}
-                placeholder="url"
-                onChange={(e) => updateAt(i, { url: e.target.value })}
-                className="mb-1 w-full rounded border border-transparent bg-muted px-2 py-1 text-xs outline-none focus:border-border"
-              />
-              <input
-                value={p.image ?? ""}
-                placeholder="image url (auto-filled: live site screenshot)"
-                onChange={(e) => updateAt(i, { image: e.target.value })}
-                className="mb-1 w-full rounded border border-transparent bg-muted px-2 py-1 text-xs outline-none focus:border-border"
-              />
-              <input
-                value={p.language ?? ""}
-                placeholder="language"
-                onChange={(e) => updateAt(i, { language: e.target.value })}
-                className="w-full rounded border border-transparent bg-muted px-2 py-1 text-xs outline-none focus:border-border"
-              />
+
+              {/* Fields */}
+              <div className="mt-3 space-y-1">
+                <input value={p.name} placeholder="Project name" onChange={(e) => updateAt(i, { name: e.target.value })} className="w-full rounded border border-transparent bg-muted px-2 py-1 text-xs outline-none focus:border-border" />
+                <input value={p.description} placeholder="Short description" onChange={(e) => updateAt(i, { description: e.target.value })} className="w-full rounded border border-transparent bg-muted px-2 py-1 text-xs outline-none focus:border-border" />
+                <input value={p.url} placeholder="Live URL (https://...)" onChange={(e) => updateAt(i, { url: e.target.value })} className="w-full rounded border border-transparent bg-muted px-2 py-1 text-xs outline-none focus:border-border" />
+                <input value={p.githubUrl ?? ''} placeholder="GitHub repo URL (optional)" onChange={(e) => updateAt(i, { githubUrl: e.target.value })} className="w-full rounded border border-transparent bg-muted px-2 py-1 text-xs outline-none focus:border-border" />
+                <input value={p.language ?? ''} placeholder="Language / tech stack" onChange={(e) => updateAt(i, { language: e.target.value })} className="w-full rounded border border-transparent bg-muted px-2 py-1 text-xs outline-none focus:border-border" />
+              </div>
             </div>
           );
         })}
@@ -329,6 +515,7 @@ function ProjectsPanel({ data, patch }: { data: PortfolioData; patch: (p: Partia
   );
 }
 
+// ── Field ────────────────────────────────────────────────────────────────────
 function Field({
   label, value, onChange, textarea, rows = 3,
 }: { label: string; value: string; onChange: (v: string) => void; textarea?: boolean; rows?: number }) {
@@ -337,14 +524,14 @@ function Field({
       <span className="mb-1.5 block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{label}</span>
       {textarea ? (
         <textarea
-          value={value ?? ""}
+          value={value ?? ''}
           onChange={(e) => onChange(e.target.value)}
           rows={rows}
           className="w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground"
         />
       ) : (
         <input
-          value={value ?? ""}
+          value={value ?? ''}
           onChange={(e) => onChange(e.target.value)}
           className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground"
         />
@@ -353,6 +540,7 @@ function Field({
   );
 }
 
+// ── ListEditor ───────────────────────────────────────────────────────────────
 function ListEditor<T extends Record<string, any>>({
   label, items, onChange, fields, blank,
 }: {
@@ -374,7 +562,7 @@ function ListEditor<T extends Record<string, any>>({
             {fields.map((f) => (
               <input
                 key={f}
-                value={item[f] ?? ""}
+                value={item[f] ?? ''}
                 placeholder={f}
                 onChange={(e) => {
                   const next = [...items];
