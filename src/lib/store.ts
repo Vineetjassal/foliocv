@@ -16,6 +16,7 @@ export const emptyPortfolio: PortfolioData = {
   title: "",
   location: "",
   bio: "",
+  about: "",
   email: "",
   website: "",
   github: "",
