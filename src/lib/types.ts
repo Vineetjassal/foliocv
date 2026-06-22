@@ -1,4 +1,4 @@
-export type TemplateId = "centered" | "split" | "editorial";
+export type TemplateId = "centered" | "split" | "editorial" | "aurora" | "minimal";
 
 export interface Project {
   name: string;

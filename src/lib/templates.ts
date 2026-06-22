@@ -43,7 +43,6 @@ function gallerySection(images: string[]): string {
   window.galleryGoTo = show;
   window.galleryPrev = function(){ show(cur - 1); };
   window.galleryNext = function(){ show(cur + 1); };
-  // Keyboard & swipe
   document.addEventListener('keydown', function(e){
     if(e.key==='ArrowLeft') window.galleryPrev();
     if(e.key==='ArrowRight') window.galleryNext();
@@ -416,6 +415,347 @@ body.light.ed-body{background:#f9f7f3;color:#1a1814}
   return { html, css };
 }
 
+// ── Aurora template (dark gradient + glassmorphism) ───────────────────────────
+function buildAurora(data: PortfolioData): { html: string; css: string } {
+  const gallery = data.galleryImages?.length ? gallerySection(data.galleryImages) : "";
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>${esc(data.name)} — Portfolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:ital@0;1&display=swap" rel="stylesheet">
+</head>
+<body class="aurora-body">
+  <div class="aurora-bg">
+    <div class="aurora-orb aurora-orb1"></div>
+    <div class="aurora-orb aurora-orb2"></div>
+    <div class="aurora-orb aurora-orb3"></div>
+  </div>
+  <div class="aurora-wrap">
+    <header class="aurora-hero">
+      ${data.avatar ? `<div class="aurora-avatar-ring"><img src="${esc(data.avatar)}" alt="${esc(data.name)}" class="aurora-avatar" loading="eager" /></div>` : ""}
+      <div class="aurora-hero-text">
+        <h1 class="aurora-name">${esc(data.name)}</h1>
+        ${data.title ? `<div class="aurora-role">${esc(data.title)}</div>` : ""}
+        ${data.location ? `<div class="aurora-location">📍 ${esc(data.location)}</div>` : ""}
+        ${data.bio ? `<p class="aurora-bio">${esc(data.bio)}</p>` : ""}
+        <div class="social-links aurora-links">${socialLinks(data)}</div>
+      </div>
+    </header>
+
+    ${gallery}
+
+    ${data.about ? `
+    <section class="aurora-card">
+      <h2 class="aurora-section-title">About</h2>
+      <p class="aurora-about">${esc(data.about)}</p>
+    </section>` : ""}
+
+    ${data.skills?.length ? `
+    <section class="aurora-card">
+      <h2 class="aurora-section-title">Skills</h2>
+      <div class="aurora-skills">${skillBadges(data.skills)}</div>
+    </section>` : ""}
+
+    ${data.experience?.length ? `
+    <section class="aurora-card">
+      <h2 class="aurora-section-title">Experience</h2>
+      ${expItems(data)}
+    </section>` : ""}
+
+    ${data.education?.length ? `
+    <section class="aurora-card">
+      <h2 class="aurora-section-title">Education</h2>
+      ${eduItems(data)}
+    </section>` : ""}
+
+    ${data.projects?.filter((p) => p.include !== false).length ? `
+    <section class="aurora-card">
+      <h2 class="aurora-section-title">Projects</h2>
+      <div class="aurora-project-grid">${projectCards(data)}</div>
+    </section>` : ""}
+  </div>
+</body>
+</html>`;
+
+  const css = baseCss + `
+body.aurora-body {
+  background: #04050d;
+  color: #e2e8f0;
+  min-height: 100vh;
+  font-family: 'Space Grotesk', sans-serif;
+  overflow-x: hidden;
+}
+.aurora-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.aurora-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.18;
+  animation: aurora-drift 14s ease-in-out infinite alternate;
+}
+.aurora-orb1 { width: 600px; height: 600px; background: #7c3aed; top: -150px; left: -150px; animation-delay: 0s; }
+.aurora-orb2 { width: 500px; height: 500px; background: #0ea5e9; top: 30%; right: -100px; animation-delay: -5s; }
+.aurora-orb3 { width: 400px; height: 400px; background: #10b981; bottom: 0; left: 30%; animation-delay: -9s; }
+@keyframes aurora-drift {
+  0%   { transform: translate(0,0) scale(1); }
+  50%  { transform: translate(40px, 30px) scale(1.08); }
+  100% { transform: translate(-20px, 20px) scale(0.95); }
+}
+.aurora-wrap {
+  position: relative;
+  z-index: 1;
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 3.5rem 1.5rem 5rem;
+}
+.aurora-hero {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  margin-bottom: 3rem;
+  flex-wrap: wrap;
+}
+.aurora-avatar-ring {
+  flex-shrink: 0;
+  padding: 3px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7c3aed, #0ea5e9, #10b981);
+}
+.aurora-avatar {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  border: 3px solid #04050d;
+}
+.aurora-hero-text { flex: 1; min-width: 200px; }
+.aurora-name {
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  font-weight: 700;
+  letter-spacing: -.03em;
+  background: linear-gradient(135deg, #a78bfa, #38bdf8, #34d399);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: .25rem;
+}
+.aurora-role {
+  font-family: 'Space Mono', monospace;
+  font-size: .78rem;
+  color: #a78bfa;
+  letter-spacing: .08em;
+  margin-bottom: .2rem;
+}
+.aurora-location { font-size: .8rem; opacity: .45; margin-bottom: .75rem; }
+.aurora-bio { font-size: .95rem; opacity: .72; line-height: 1.7; margin-bottom: 1rem; max-width: 50ch; }
+.aurora-links { gap: .5rem 1rem; }
+.aurora-links a {
+  color: #a78bfa;
+  opacity: 1;
+  font-size: .82rem;
+  border-bottom: 1px solid transparent;
+  transition: border-color .2s;
+}
+.aurora-links a:hover { border-color: #a78bfa; text-decoration: none; }
+.aurora-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 1rem;
+  padding: 1.75rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.aurora-section-title {
+  font-size: .65rem;
+  text-transform: uppercase;
+  letter-spacing: .22em;
+  color: #a78bfa;
+  opacity: 1;
+  margin-bottom: 1.25rem;
+}
+.aurora-about { font-size: .95rem; opacity: .78; line-height: 1.8; }
+.aurora-skills { display: flex; flex-wrap: wrap; gap: .3rem; }
+.aurora-card .skill-badge { border-color: rgba(167,139,250,.4); color: #c4b5fd; opacity: 1; }
+.aurora-project-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(260px,1fr)); gap: 1rem; }
+.aurora-card .project-card {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.1);
+}
+.aurora-card .project-title { color: #e2e8f0; }
+`;
+
+  return { html, css };
+}
+
+// ── Minimal template (clean light typographic) ───────────────────────────────
+function buildMinimal(data: PortfolioData): { html: string; css: string } {
+  const gallery = data.galleryImages?.length ? gallerySection(data.galleryImages) : "";
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>${esc(data.name)} — Portfolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+</head>
+<body class="min-body">
+  <div class="min-container">
+    <header class="min-header">
+      <div class="min-header-left">
+        <h1 class="min-name">${esc(data.name)}</h1>
+        ${data.title ? `<span class="min-role">${esc(data.title)}</span>` : ""}
+      </div>
+      <div class="min-header-right">
+        ${data.avatar ? `<img src="${esc(data.avatar)}" alt="${esc(data.name)}" class="min-avatar" loading="eager" />` : ""}
+      </div>
+    </header>
+
+    <div class="min-meta">
+      ${data.location ? `<span class="min-meta-item">${esc(data.location)}</span>` : ""}
+      ${data.bio ? `<span class="min-meta-item min-bio">${esc(data.bio)}</span>` : ""}
+    </div>
+    <div class="social-links min-links">${socialLinks(data)}</div>
+
+    <hr class="min-divider" />
+
+    ${gallery}
+
+    <div class="min-body-grid">
+      <div class="min-main">
+        ${data.about ? `
+        <section class="min-section">
+          <h2 class="min-section-title">About</h2>
+          <p class="min-about">${esc(data.about)}</p>
+        </section>` : ""}
+
+        ${data.experience?.length ? `
+        <section class="min-section">
+          <h2 class="min-section-title">Experience</h2>
+          ${expItems(data)}
+        </section>` : ""}
+
+        ${data.projects?.filter((p) => p.include !== false).length ? `
+        <section class="min-section">
+          <h2 class="min-section-title">Projects</h2>
+          <div class="min-project-grid">${projectCards(data)}</div>
+        </section>` : ""}
+      </div>
+
+      <aside class="min-aside">
+        ${data.skills?.length ? `
+        <section class="min-section">
+          <h2 class="min-section-title">Skills</h2>
+          <div class="min-skills">${skillBadges(data.skills)}</div>
+        </section>` : ""}
+
+        ${data.education?.length ? `
+        <section class="min-section">
+          <h2 class="min-section-title">Education</h2>
+          ${eduItems(data)}
+        </section>` : ""}
+      </aside>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const css = baseCss + `
+body.min-body {
+  background: #ffffff;
+  color: #111111;
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+}
+body.light.min-body { background: #ffffff; color: #111111; }
+.min-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 3.5rem 2rem 5rem;
+}
+.min-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+.min-header-left { flex: 1; }
+.min-name {
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  font-weight: 300;
+  letter-spacing: -.04em;
+  line-height: 1.1;
+  margin-bottom: .2rem;
+  color: #111;
+}
+.min-role {
+  font-family: 'DM Mono', monospace;
+  font-size: .78rem;
+  color: #888;
+  letter-spacing: .04em;
+}
+.min-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #eee;
+  flex-shrink: 0;
+  margin-left: 1.5rem;
+}
+.min-meta {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+  margin-bottom: .75rem;
+}
+.min-meta-item { font-size: .88rem; color: #555; }
+.min-bio { font-style: italic; max-width: 55ch; }
+.min-links { margin-bottom: 1.5rem; }
+.min-links a { color: #111; font-size: .82rem; border-bottom: 1px solid #ddd; padding-bottom: 1px; transition: border-color .2s; }
+.min-links a:hover { border-color: #111; text-decoration: none; }
+.min-divider { border: none; border-top: 2px solid #111; margin-bottom: 2.5rem; }
+.min-body-grid {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 3rem;
+}
+@media(max-width: 680px) { .min-body-grid { grid-template-columns: 1fr; } }
+.min-section { margin-bottom: 2.5rem; }
+.min-section-title {
+  font-size: .65rem;
+  text-transform: uppercase;
+  letter-spacing: .2em;
+  color: #999;
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+.min-about { font-size: .95rem; line-height: 1.85; color: #333; max-width: 58ch; }
+.min-skills { display: flex; flex-wrap: wrap; gap: .25rem; }
+.min-skills .skill-badge { border-color: #ccc; color: #444; font-size: .68rem; }
+.min-project-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(240px,1fr)); gap: .85rem; }
+.min-main .project-card { border-color: #eee; }
+.min-main .project-title { color: #111; font-size: .9rem; }
+.min-main .project-desc { color: #666; }
+.min-aside .exp-item, .min-aside .edu-item { border-color: #eee; }
+.min-aside .exp-role, .min-aside .edu-degree { color: #111; font-size: .85rem; }
+.min-aside .exp-company, .min-aside .edu-school { color: #888; }
+`;
+
+  return { html, css };
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 export function buildSite(
   data: PortfolioData,
@@ -423,5 +763,7 @@ export function buildSite(
 ): { html: string; css: string } {
   if (template === "split") return buildSplit(data);
   if (template === "editorial") return buildEditorial(data);
+  if (template === "aurora") return buildAurora(data);
+  if (template === "minimal") return buildMinimal(data);
   return buildCentered(data);
 }
