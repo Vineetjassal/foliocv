@@ -14,56 +14,60 @@
         position: fixed;
         inset: 0;
         z-index: 99999;
-        background: #ffffff;
+        background: #111111;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 2rem;
+        gap: 1.75rem;
         font-family: 'Segoe UI', system-ui, sans-serif;
         transition: opacity 0.5s ease;
-      }
-      @media (prefers-color-scheme: dark) {
-        #folio-loader { background: #111111; }
       }
       #folio-loader.fl-out {
         opacity: 0;
         pointer-events: none;
       }
 
-      .fl-wordmark {
-        font-size: 1rem;
-        font-weight: 700;
-        letter-spacing: .18em;
-        text-transform: uppercase;
-        color: #111111;
-      }
-      @media (prefers-color-scheme: dark) {
-        .fl-wordmark { color: #f0f0f0; }
-      }
-
-      .fl-progress-wrap {
-        width: min(280px, 75vw);
+      /* Logo mark */
+      .fl-logo-wrap {
         display: flex;
         flex-direction: column;
-        gap: .55rem;
+        align-items: center;
+        gap: .75rem;
+      }
+      .fl-logo-img {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        object-fit: contain;
+        /* invert so logo shows white on black bg */
+        filter: invert(1);
+      }
+      .fl-wordmark {
+        font-size: .9rem;
+        font-weight: 700;
+        letter-spacing: .2em;
+        text-transform: uppercase;
+        color: #f0f0f0;
+      }
+
+      /* Progress */
+      .fl-progress-wrap {
+        width: min(260px, 72vw);
+        display: flex;
+        flex-direction: column;
+        gap: .5rem;
       }
       .fl-bar-track {
         width: 100%;
         height: 1px;
-        background: #e0e0e0;
-      }
-      @media (prefers-color-scheme: dark) {
-        .fl-bar-track { background: #2a2a2a; }
+        background: #2a2a2a;
       }
       .fl-bar-fill {
         height: 100%;
         width: 0%;
-        background: #111111;
+        background: #f0f0f0;
         transition: width 0.1s linear;
-      }
-      @media (prefers-color-scheme: dark) {
-        .fl-bar-fill { background: #f0f0f0; }
       }
       .fl-status-row {
         display: flex;
@@ -71,26 +75,26 @@
         align-items: center;
       }
       .fl-status {
-        font-size: .65rem;
+        font-size: .62rem;
         letter-spacing: .08em;
-        color: #999999;
+        color: #555555;
       }
       .fl-percent {
-        font-size: .65rem;
+        font-size: .62rem;
         font-variant-numeric: tabular-nums;
-        letter-spacing: .04em;
-        color: #111111;
+        letter-spacing: .06em;
+        color: #f0f0f0;
         font-weight: 600;
-      }
-      @media (prefers-color-scheme: dark) {
-        .fl-percent { color: #f0f0f0; }
       }
     </style>
   </head>
   <body>
 
     <div id="folio-loader" role="status" aria-label="Loading FolioCV">
-      <div class="fl-wordmark">FolioCV</div>
+      <div class="fl-logo-wrap">
+        <img src="/logo.png" alt="FolioCV" class="fl-logo-img" />
+        <div class="fl-wordmark">FolioCV</div>
+      </div>
       <div class="fl-progress-wrap">
         <div class="fl-bar-track">
           <div class="fl-bar-fill" id="fl-fill"></div>
