@@ -140,6 +140,80 @@ const galleryCss = `
 }
 `;
 
+// ── Dark / Light toggle injected into every generated portfolio ───────────────
+const themeSwitcherHtml = `
+<!-- FolioCV theme toggle -->
+<button
+  id="folio-theme-btn"
+  onclick="folioToggleTheme()"
+  aria-label="Toggle dark / light mode"
+  title="Toggle dark / light mode"
+  style="
+    position:fixed;bottom:1.25rem;right:1.25rem;z-index:9999;
+    width:2.5rem;height:2.5rem;
+    border-radius:50%;border:1.5px solid rgba(128,128,128,0.3);
+    background:rgba(30,30,30,0.85);color:#f0f0f0;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;font-size:1rem;line-height:1;
+    box-shadow:0 4px 16px rgba(0,0,0,0.25);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    transition:background 0.25s,color 0.25s,border-color 0.25s,transform 0.15s;
+  "
+>🌙</button>
+<script>
+(function(){
+  var btn = document.getElementById('folio-theme-btn');
+  var root = document.documentElement;
+  var DARK_ICON = '🌙';
+  var LIGHT_ICON = '☀️';
+  var KEY = 'folio-theme';
+
+  function applyTheme(mode) {
+    if (mode === 'light') {
+      root.classList.add('light');
+      root.classList.remove('dark');
+      if (btn) {
+        btn.textContent = DARK_ICON;
+        btn.style.background = 'rgba(240,240,240,0.9)';
+        btn.style.color = '#111';
+        btn.style.borderColor = 'rgba(0,0,0,0.15)';
+      }
+    } else {
+      root.classList.remove('light');
+      root.classList.add('dark');
+      if (btn) {
+        btn.textContent = LIGHT_ICON;
+        btn.style.background = 'rgba(20,20,20,0.9)';
+        btn.style.color = '#f0f0f0';
+        btn.style.borderColor = 'rgba(255,255,255,0.15)';
+      }
+    }
+    try { localStorage.setItem(KEY, mode); } catch(e){}
+  }
+
+  window.folioToggleTheme = function() {
+    var current = root.classList.contains('light') ? 'light' : 'dark';
+    applyTheme(current === 'light' ? 'dark' : 'light');
+  };
+
+  // Respect saved preference, else system preference
+  var saved = null;
+  try { saved = localStorage.getItem(KEY); } catch(e){}
+  var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var initial = saved || (prefersDark ? 'dark' : 'light');
+  applyTheme(initial);
+
+  // Watch system pref changes (only if no saved pref)
+  if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+      var hasSaved = false;
+      try { hasSaved = !!localStorage.getItem(KEY); } catch(x){}
+      if (!hasSaved) applyTheme(e.matches ? 'dark' : 'light');
+    });
+  }
+})();
+<\/script>`;
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function esc(s: string | undefined | null): string {
   return (s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -249,6 +323,7 @@ function buildCentered(data: PortfolioData): { html: string; css: string } {
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>${esc(data.name)} — Portfolio</title>
+<meta name="description" content="${esc(data.bio || data.about || data.name + "'s portfolio")}" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 </head>
@@ -273,12 +348,19 @@ function buildCentered(data: PortfolioData): { html: string; css: string } {
 
   ${data.projects?.filter((p) => p.include !== false).length ? `<section class="centered-section"><h2 class="section-title">Projects</h2><div class="project-grid">${projectCards(data)}</div></section>` : ""}
 </main>
+${themeSwitcherHtml}
 </body>
 </html>`;
 
   const css = baseCss + `
-body.centered-body{background:#0d0d0d;color:#e8e6e1}
-body.light.centered-body{background:#faf9f7;color:#1a1a1a}
+/* ── Centered: dark (default) ── */
+html.dark body.centered-body, body.centered-body { background:#0d0d0d; color:#e8e6e1; }
+/* ── Centered: light ── */
+html.light body.centered-body { background:#faf9f7; color:#1a1a1a; }
+html.light .centered-body .section-title { color: #888; }
+html.light .centered-body .project-card { border-color: #e0ddd8; }
+html.light .centered-body .exp-item, html.light .centered-body .edu-item { border-color: #e0ddd8; }
+html.light .centered-body .social-links a { color: #444; }
 .centered-main{max-width:640px;margin:0 auto;padding:4rem 1.5rem 6rem}
 .centered-avatar{width:72px;height:72px;border-radius:50%;object-fit:cover;margin:0 auto 1.5rem}
 .centered-name{font-family:'EB Garamond',Georgia,serif;font-size:clamp(2rem,5vw,3rem);font-weight:400;text-align:center;letter-spacing:-.02em;margin-bottom:.35rem}
@@ -303,6 +385,7 @@ function buildSplit(data: PortfolioData): { html: string; css: string } {
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>${esc(data.name)} — Portfolio</title>
+<meta name="description" content="${esc(data.bio || data.about || data.name + "'s portfolio")}" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 </head>
@@ -325,16 +408,23 @@ function buildSplit(data: PortfolioData): { html: string; css: string } {
     ${data.projects?.filter((p) => p.include !== false).length ? `<section class="split-section"><h2 class="section-title">Projects</h2><div class="project-grid">${projectCards(data)}</div></section>` : ""}
   </main>
 </div>
+${themeSwitcherHtml}
 </body>
 </html>`;
 
   const css = baseCss + `
-body.split-body{background:#0c0c0c;color:#dbd9d4;min-height:100vh}
-body.light.split-body{background:#f7f6f4;color:#1c1b18}
+/* ── Split: dark (default) ── */
+html.dark body.split-body, body.split-body { background:#0c0c0c; color:#dbd9d4; min-height:100vh; }
+/* ── Split: light ── */
+html.light body.split-body { background:#f7f6f4; color:#1c1b18; }
+html.light .split-sidebar { background:#eeece8; border-right-color:rgba(0,0,0,0.08); }
+html.light .split-body .section-title { color:#999; }
+html.light .split-body .project-card { border-color:#dddad5; background:#fff; }
+html.light .split-body .exp-item, html.light .split-body .edu-item { border-color:#dddad5; }
+html.light .split-body .social-links a { color:#555; }
 .split-layout{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
 @media(max-width:768px){.split-layout{grid-template-columns:1fr}}
-.split-sidebar{position:sticky;top:0;height:100vh;overflow-y:auto;padding:2.5rem 1.75rem;border-right:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;gap:.5rem}
-body.light .split-sidebar{border-right-color:rgba(0,0,0,.08)}
+.split-sidebar{position:sticky;top:0;height:100vh;overflow-y:auto;padding:2.5rem 1.75rem;border-right:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;gap:.5rem;transition:background 0.3s;}
 .split-avatar{width:64px;height:64px;border-radius:.5rem;object-fit:cover;margin-bottom:.75rem}
 .split-name{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:700;letter-spacing:-.02em;line-height:1.2;margin-bottom:.2rem}
 .split-title{font-size:.75rem;text-transform:uppercase;letter-spacing:.12em;opacity:.45;margin-bottom:.15rem}
@@ -347,7 +437,6 @@ body.light .split-sidebar{border-right-color:rgba(0,0,0,.08)}
 .split-section{margin-bottom:3rem}
 .split-about{font-size:.95rem;opacity:.75;line-height:1.8;max-width:60ch}
 .project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem}
---c-border: rgba(255,255,255,.1);
 `;
 
   return { html, css };
@@ -362,6 +451,7 @@ function buildEditorial(data: PortfolioData): { html: string; css: string } {
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>${esc(data.name)} — Portfolio</title>
+<meta name="description" content="${esc(data.bio || data.about || data.name + "'s portfolio")}" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
 </head>
@@ -387,13 +477,30 @@ function buildEditorial(data: PortfolioData): { html: string; css: string } {
   </div>
   ${data.projects?.filter((p) => p.include !== false).length ? `<section class="ed-projects"><h2 class="section-title">Projects</h2><div class="project-grid">${projectCards(data)}</div></section>` : ""}
 </main>
+${themeSwitcherHtml}
 </body>
 </html>`;
 
   const css = baseCss + `
-body.ed-body{background:#f9f7f3;color:#1a1814;min-height:100vh}
-body.light.ed-body{background:#f9f7f3;color:#1a1814}
-.ed-header{background:#1a1814;color:#f0ede8;padding:4rem 0 3rem}
+/* ── Editorial: light (default — editorial is light-first) ── */
+html.light body.ed-body, body.ed-body { background:#f9f7f3; color:#1a1814; min-height:100vh; }
+html.light .ed-header { background:#1a1814; color:#f0ede8; }
+html.light .ed-body .section-title { color:#aaa; }
+html.light .ed-body .project-card { border-color:#e5e1d8; background:#fff; }
+html.light .ed-body .exp-item, html.light .ed-body .edu-item { border-color:#e5e1d8; }
+
+/* ── Editorial: dark ── */
+html.dark body.ed-body { background:#111008; color:#e8e4dc; }
+html.dark .ed-header { background:#0a0900; color:#e8e4dc; border-bottom: 1px solid rgba(255,255,255,0.07); }
+html.dark .ed-main { background:#111008; }
+html.dark .ed-body .section-title { color:#888; }
+html.dark .ed-body .project-card { border-color:rgba(255,255,255,0.1); background:rgba(255,255,255,0.03); }
+html.dark .ed-body .project-title { color:#e8e4dc; }
+html.dark .ed-body .project-desc { color:#aaa; }
+html.dark .ed-body .project-links a { color:#c9c5bc; }
+html.dark .ed-body .exp-item, html.dark .ed-body .edu-item { border-color:rgba(255,255,255,0.08); }
+html.dark .ed-body .social-links a { color:#c9c5bc; }
+.ed-header{padding:4rem 0 3rem;transition:background 0.3s,color 0.3s;}
 .ed-header-inner{max-width:1100px;margin:0 auto;padding:0 2rem;display:flex;align-items:flex-start;gap:2.5rem;justify-content:space-between}
 .ed-header-text{flex:1}
 .ed-name{font-family:'Playfair Display',Georgia,serif;font-size:clamp(2.5rem,6vw,5rem);font-weight:700;letter-spacing:-.03em;line-height:1.05;margin-bottom:.4rem}
@@ -401,7 +508,7 @@ body.light.ed-body{background:#f9f7f3;color:#1a1814}
 .ed-bio{font-size:1.05rem;opacity:.7;max-width:52ch;line-height:1.7;margin-bottom:1.25rem}
 .ed-links{opacity:.7}
 .ed-avatar{width:140px;height:140px;border-radius:.5rem;object-fit:cover;flex-shrink:0}
-.ed-main{max-width:1100px;margin:0 auto;padding:3rem 2rem 5rem}
+.ed-main{max-width:1100px;margin:0 auto;padding:3rem 2rem 5rem;transition:background 0.3s,color 0.3s;}
 .ed-grid{display:grid;grid-template-columns:1fr 1fr;gap:2.5rem 3rem;margin-bottom:3rem}
 @media(max-width:768px){.ed-grid{grid-template-columns:1fr}}
 .ed-section{}
@@ -424,6 +531,7 @@ function buildAurora(data: PortfolioData): { html: string; css: string } {
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>${esc(data.name)} — Portfolio</title>
+<meta name="description" content="${esc(data.bio || data.about || data.name + "'s portfolio")}" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:ital@0;1&display=swap" rel="stylesheet">
 </head>
@@ -477,17 +585,50 @@ function buildAurora(data: PortfolioData): { html: string; css: string } {
       <div class="aurora-project-grid">${projectCards(data)}</div>
     </section>` : ""}
   </div>
+${themeSwitcherHtml}
 </body>
 </html>`;
 
   const css = baseCss + `
-body.aurora-body {
+/* ── Aurora: dark (default) ── */
+html.dark body.aurora-body, body.aurora-body {
   background: #04050d;
   color: #e2e8f0;
   min-height: 100vh;
   font-family: 'Space Grotesk', sans-serif;
   overflow-x: hidden;
+  transition: background 0.4s, color 0.3s;
 }
+
+/* ── Aurora: light ── */
+html.light body.aurora-body {
+  background: #f0eeff;
+  color: #1a1030;
+}
+html.light .aurora-bg .aurora-orb { opacity: 0.10; }
+html.light .aurora-orb1 { background: #7c3aed; }
+html.light .aurora-orb2 { background: #0ea5e9; }
+html.light .aurora-orb3 { background: #10b981; }
+html.light .aurora-card {
+  background: rgba(255,255,255,0.7);
+  border-color: rgba(124,58,237,0.15);
+  backdrop-filter: blur(12px);
+}
+html.light .aurora-body .aurora-name {
+  background: linear-gradient(135deg, #5b21b6, #0284c7, #059669);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+html.light .aurora-body .aurora-role { color: #5b21b6; }
+html.light .aurora-body .aurora-section-title { color: #5b21b6; }
+html.light .aurora-body .aurora-links a { color: #5b21b6; }
+html.light .aurora-body .aurora-card .skill-badge { border-color: rgba(91,33,182,0.35); color: #5b21b6; opacity: 1; }
+html.light .aurora-body .project-card { background: rgba(255,255,255,0.8); border-color: rgba(124,58,237,0.15); }
+html.light .aurora-body .project-title { color: #1a1030; }
+html.light .aurora-body .project-desc { color: #4a3d6e; }
+html.light .aurora-body .exp-item, html.light .aurora-body .edu-item { border-color: rgba(124,58,237,0.15); }
+
 .aurora-bg {
   position: fixed;
   inset: 0;
@@ -538,6 +679,7 @@ body.aurora-body {
   display: block;
   border: 3px solid #04050d;
 }
+html.light .aurora-avatar { border-color: #f0eeff; }
 .aurora-hero-text { flex: 1; min-width: 200px; }
 .aurora-name {
   font-size: clamp(1.8rem, 5vw, 2.8rem);
@@ -575,6 +717,7 @@ body.aurora-body {
   border-radius: 1rem;
   padding: 1.75rem 1.5rem;
   margin-bottom: 1.5rem;
+  transition: background 0.3s, border-color 0.3s;
 }
 .aurora-section-title {
   font-size: .65rem;
@@ -607,6 +750,7 @@ function buildMinimal(data: PortfolioData): { html: string; css: string } {
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>${esc(data.name)} — Portfolio</title>
+<meta name="description" content="${esc(data.bio || data.about || data.name + "'s portfolio")}" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
 </head>
@@ -668,17 +812,41 @@ function buildMinimal(data: PortfolioData): { html: string; css: string } {
       </aside>
     </div>
   </div>
+${themeSwitcherHtml}
 </body>
 </html>`;
 
   const css = baseCss + `
-body.min-body {
+/* ── Minimal: light (default — minimal is light-first) ── */
+html.light body.min-body, body.min-body {
   background: #ffffff;
   color: #111111;
   font-family: 'DM Sans', sans-serif;
   min-height: 100vh;
+  transition: background 0.3s, color 0.3s;
 }
-body.light.min-body { background: #ffffff; color: #111111; }
+
+/* ── Minimal: dark ── */
+html.dark body.min-body {
+  background: #0f0f0f;
+  color: #e8e6e0;
+}
+html.dark .min-body .min-name { color: #e8e6e0; }
+html.dark .min-body .min-role { color: #888; }
+html.dark .min-body .min-meta-item { color: #aaa; }
+html.dark .min-body .min-links a { color: #ccc; border-color: #333; }
+html.dark .min-body .min-links a:hover { border-color: #ccc; }
+html.dark .min-body .min-divider { border-color: #e8e6e0; }
+html.dark .min-body .min-section-title { color: #888; }
+html.dark .min-body .min-about { color: #ccc; }
+html.dark .min-body .min-skills .skill-badge { border-color: #555; color: #bbb; }
+html.dark .min-body .project-card { border-color: #2a2a2a; background: #1a1a1a; }
+html.dark .min-body .project-title { color: #e8e6e0; }
+html.dark .min-body .project-desc { color: #999; }
+html.dark .min-body .project-links a { color: #bbb; }
+html.dark .min-body .exp-item, html.dark .min-body .edu-item { border-color: #2a2a2a; }
+html.dark .min-body .exp-role, html.dark .min-body .edu-degree { color: #e8e6e0; }
+html.dark .min-body .exp-company, html.dark .min-body .edu-school { color: #888; }
 .min-container {
   max-width: 900px;
   margin: 0 auto;
@@ -698,6 +866,7 @@ body.light.min-body { background: #ffffff; color: #111111; }
   line-height: 1.1;
   margin-bottom: .2rem;
   color: #111;
+  transition: color 0.3s;
 }
 .min-role {
   font-family: 'DM Mono', monospace;
@@ -725,7 +894,7 @@ body.light.min-body { background: #ffffff; color: #111111; }
 .min-links { margin-bottom: 1.5rem; }
 .min-links a { color: #111; font-size: .82rem; border-bottom: 1px solid #ddd; padding-bottom: 1px; transition: border-color .2s; }
 .min-links a:hover { border-color: #111; text-decoration: none; }
-.min-divider { border: none; border-top: 2px solid #111; margin-bottom: 2.5rem; }
+.min-divider { border: none; border-top: 2px solid #111; margin-bottom: 2.5rem; transition: border-color 0.3s; }
 .min-body-grid {
   display: grid;
   grid-template-columns: 1fr 280px;
