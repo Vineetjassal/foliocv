@@ -1,5 +1,12 @@
 export type TemplateId = "centered" | "split" | "editorial" | "aurora" | "minimal";
 
+export type FontFamily =
+  | "inter"
+  | "playfair"
+  | "roboto-mono"
+  | "syne"
+  | "dm-sans";
+
 export interface Project {
   name: string;
   description: string;
@@ -32,4 +39,8 @@ export interface PortfolioData {
   galleryImages?: string[];
   /** GitHub README sync — when true, portfolio.json is pushed to the user's GitHub profile repo */
   githubSync?: boolean;
+  /** Custom accent color hex (e.g. "#7c3aed") applied across the generated portfolio */
+  accentColor?: string;
+  /** Font family choice for the generated portfolio */
+  fontFamily?: FontFamily;
 }
