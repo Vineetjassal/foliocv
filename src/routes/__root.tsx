@@ -1,6 +1,5 @@
 import { Outlet, createRootRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
-import { Logo } from "@/components/Logo";
+import { useEffect, useState } from "react";
 import { Analytics } from "@vercel/analytics/react";
 
 function NotFoundComponent() {
@@ -43,12 +42,65 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
+/** Global dark-mode provider — reads/writes localStorage and sets class on <html> */
+function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    if (typeof window === "undefined") return "dark";
+    const stored = localStorage.getItem("foliocv_theme") as "dark" | "light" | null;
+    if (stored) return stored;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === "dark") {
+      root.classList.add("dark");
+      root.classList.remove("light");
+    } else {
+      root.classList.add("light");
+      root.classList.remove("dark");
+    }
+    localStorage.setItem("foliocv_theme", theme);
+  }, [theme]);
+
+  // Expose toggle via a custom event so any component can call it
+  useEffect(() => {
+    const handler = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
+    window.addEventListener("foliocv:toggle-theme", handler);
+    return () => window.removeEventListener("foliocv:toggle-theme", handler);
+  }, []);
+
+  return <>{children}</>;
+}
+
+/** Call this from any component to toggle the app-level theme */
+export function toggleAppTheme() {
+  window.dispatchEvent(new Event("foliocv:toggle-theme"));
+}
+
+/** Hook to read current app theme */
+export function useAppTheme(): "dark" | "light" {
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    if (typeof window === "undefined") return "dark";
+    return (localStorage.getItem("foliocv_theme") as "dark" | "light") ??
+      (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  });
+  useEffect(() => {
+    const handler = () => {
+      setTheme((localStorage.getItem("foliocv_theme") as "dark" | "light") ?? "dark");
+    };
+    window.addEventListener("foliocv:toggle-theme", handler);
+    return () => window.removeEventListener("foliocv:toggle-theme", handler);
+  }, []);
+  return theme;
+}
+
 export const Route = createRootRoute({
   component: () => (
-    <>
+    <ThemeProvider>
       <Outlet />
       <Analytics />
-    </>
+    </ThemeProvider>
   ),
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
