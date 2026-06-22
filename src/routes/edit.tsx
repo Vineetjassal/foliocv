@@ -4,7 +4,7 @@ import { Logo } from "@/components/Logo";
 import { useStore } from "@/lib/store";
 import { buildSite } from "@/lib/templates";
 import { enhanceBio } from "@/lib/aiBio";
-import { screenshotUrl } from "@/lib/github";
+import { screenshotUrl, pushPortfolioJson, extractUsername } from "@/lib/github";
 import type { PortfolioData, Project, TemplateId } from "@/lib/types";
 
 export const Route = createFileRoute("/edit")({
@@ -17,6 +17,8 @@ const TEMPLATES: { id: TemplateId; name: string; tagline: string }[] = [
   { id: "split", name: "Studio", tagline: "Sidebar + content · structured" },
   { id: "editorial", name: "Editorial", tagline: "Bold serif · magazine layout" },
 ];
+
+const MAX_GALLERY_IMAGES = 15;
 
 /** Convert File to base64 data URL — stored locally in memory/state, included in downloaded zip */
 function fileToDataUrl(file: File): Promise<string> {
@@ -36,7 +38,6 @@ function SkillsField({
   initialSkills: string[];
   onCommit: (skills: string[]) => void;
 }) {
-  // Raw comma string — only initialised ONCE on mount
   const [raw, setRaw] = useState(() => {
     if (Array.isArray(initialSkills)) return initialSkills.join(", ");
     if (typeof initialSkills === "string") return initialSkills;
@@ -50,7 +51,6 @@ function SkillsField({
 
   function handleChange(v: string) {
     setRaw(v);
-    // Commit parsed array to store on every keystroke
     const arr = v
       .split(",")
       .map((s) => s.trim())
@@ -167,7 +167,9 @@ function Editor() {
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`flex-1 py-3 capitalize transition ${tab === t ? "bg-background text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                className={`flex-1 py-3 capitalize transition ${
+                  tab === t ? "bg-background text-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
               >
                 {t}
               </button>
@@ -183,7 +185,11 @@ function Editor() {
                   <button
                     key={t.id}
                     onClick={() => setTemplate(t.id)}
-                    className={`w-full rounded-xl border p-4 text-left transition ${template === t.id ? "border-foreground bg-accent" : "border-border hover:border-muted-foreground"}`}
+                    className={`w-full rounded-xl border p-4 text-left transition ${
+                      template === t.id
+                        ? "border-foreground bg-accent"
+                        : "border-border hover:border-muted-foreground"
+                    }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="font-serif text-lg">{t.name}</div>
@@ -305,17 +311,16 @@ function AiBioButton({
   );
 }
 
-// ── Avatar Upload (stores base64 locally in React state / store) ────────────────────
+// ── Avatar Upload ─────────────────────────────────────────────────────────────
 function AvatarField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    // Read as base64 data URL — lives in memory, bundled into downloaded zip
     const dataUrl = await fileToDataUrl(file);
     onChange(dataUrl);
-    e.target.value = ""; // reset so same file can be re-selected
+    e.target.value = "";
   }
 
   return (
@@ -324,7 +329,6 @@ function AvatarField({ value, onChange }: { value: string; onChange: (v: string)
         Your Photo
       </span>
       <div className="flex items-center gap-3">
-        {/* Preview */}
         {value ? (
           <img
             src={value}
@@ -348,34 +352,19 @@ function AvatarField({ value, onChange }: { value: string; onChange: (v: string)
           </div>
         )}
         <div className="flex flex-1 flex-col gap-2">
-          {/* Upload button — prominent */}
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
             className="flex items-center gap-2 rounded-md border border-border bg-muted px-3 py-2 text-xs font-medium hover:bg-accent hover:border-foreground transition"
           >
-            <svg
-              width="13"
-              height="13"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
               <polyline points="17 8 12 3 7 8" />
               <line x1="12" y1="3" x2="12" y2="15" />
             </svg>
             Upload photo from computer
           </button>
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleFile}
-          />
-          {/* URL fallback */}
+          <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
           <input
             value={value?.startsWith("data:") ? "" : (value ?? "")}
             onChange={(e) => onChange(e.target.value)}
@@ -393,6 +382,299 @@ function AvatarField({ value, onChange }: { value: string; onChange: (v: string)
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── Profile Gallery Field ─────────────────────────────────────────────────────
+function ProfileGalleryField({
+  images,
+  onChange,
+}: {
+  images: string[];
+  onChange: (imgs: string[]) => void;
+}) {
+  const [idx, setIdx] = useState(0);
+  const [addingUrl, setAddingUrl] = useState(false);
+  const [newUrl, setNewUrl] = useState("");
+  const uploadRef = useRef<HTMLInputElement>(null);
+
+  const all = images ?? [];
+  const current = all[Math.min(idx, Math.max(0, all.length - 1))];
+  const canAdd = all.length < MAX_GALLERY_IMAGES;
+
+  function prev() { setIdx((i) => (i - 1 + all.length) % all.length); }
+  function next() { setIdx((i) => (i + 1) % all.length); }
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !canAdd) return;
+    const dataUrl = await fileToDataUrl(file);
+    const updated = [...all, dataUrl];
+    onChange(updated);
+    setIdx(updated.length - 1);
+    e.target.value = "";
+  }
+
+  function addUrl() {
+    if (!newUrl.trim() || !canAdd) return;
+    const updated = [...all, newUrl.trim()];
+    onChange(updated);
+    setIdx(updated.length - 1);
+    setNewUrl("");
+    setAddingUrl(false);
+  }
+
+  function removeCurrent() {
+    const updated = all.filter((_, i) => i !== idx);
+    onChange(updated);
+    setIdx(Math.max(0, idx - 1));
+  }
+
+  return (
+    <div className="rounded-lg border border-border bg-background p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+          Profile Gallery
+        </span>
+        <span className={`text-[10px] font-medium ${ all.length >= MAX_GALLERY_IMAGES ? "text-destructive" : "text-muted-foreground" }`}>
+          {all.length} / {MAX_GALLERY_IMAGES}
+        </span>
+      </div>
+
+      {/* Carousel preview */}
+      {all.length > 0 ? (
+        <div className="relative overflow-hidden rounded-lg border border-border bg-muted">
+          <img
+            src={current}
+            alt={`Gallery image ${idx + 1}`}
+            className="h-44 w-full object-cover"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).src = ""; }}
+          />
+          {all.length > 1 && (
+            <>
+              <button
+                onClick={prev}
+                className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/60 px-3 py-1.5 text-sm text-white hover:bg-black/80 transition"
+                aria-label="Previous image"
+              >
+                ‹
+              </button>
+              <button
+                onClick={next}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/60 px-3 py-1.5 text-sm text-white hover:bg-black/80 transition"
+                aria-label="Next image"
+              >
+                ›
+              </button>
+            </>
+          )}
+          {/* Dot indicators */}
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+            {all.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setIdx(i)}
+                aria-label={`Go to image ${i + 1}`}
+                className={`h-1.5 rounded-full transition-all ${
+                  i === idx ? "w-4 bg-white" : "w-1.5 bg-white/50 hover:bg-white/80"
+                }`}
+              />
+            ))}
+          </div>
+          {/* Image counter */}
+          <div className="absolute top-2 right-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] text-white">
+            {idx + 1} / {all.length}
+          </div>
+          {/* Remove button */}
+          <button
+            onClick={removeCurrent}
+            className="absolute top-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] text-red-400 hover:text-red-300 hover:bg-black/80 transition"
+            aria-label="Remove current image"
+          >
+            ✕ Remove
+          </button>
+        </div>
+      ) : (
+        <div className="flex h-32 flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/40 gap-1.5">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-muted-foreground">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <polyline points="21 15 16 10 5 21" />
+          </svg>
+          <span className="text-[10px] text-muted-foreground">No gallery images yet</span>
+        </div>
+      )}
+
+      {/* Thumbnail strip */}
+      {all.length > 1 && (
+        <div className="flex gap-1.5 overflow-x-auto pb-1">
+          {all.map((src, i) => (
+            <button
+              key={i}
+              onClick={() => setIdx(i)}
+              aria-label={`Select image ${i + 1}`}
+              className={`h-12 w-12 shrink-0 overflow-hidden rounded border-2 transition ${
+                i === idx ? "border-foreground" : "border-transparent opacity-60 hover:opacity-100"
+              }`}
+            >
+              <img src={src} alt="" className="h-full w-full object-cover" />
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Action buttons */}
+      <div className="flex flex-wrap gap-1.5">
+        <button
+          type="button"
+          onClick={() => canAdd && uploadRef.current?.click()}
+          disabled={!canAdd}
+          className="flex items-center gap-1.5 rounded-md border border-border bg-muted px-2.5 py-1.5 text-[10px] font-medium hover:bg-accent hover:border-foreground transition disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+          Upload image
+        </button>
+        <input ref={uploadRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+
+        <button
+          onClick={() => setAddingUrl((a) => !a)}
+          disabled={!canAdd}
+          className="rounded-md border border-border bg-muted px-2.5 py-1.5 text-[10px] hover:bg-accent transition disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          + Paste URL
+        </button>
+      </div>
+
+      {addingUrl && (
+        <div className="flex gap-1">
+          <input
+            autoFocus
+            value={newUrl}
+            onChange={(e) => setNewUrl(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && addUrl()}
+            placeholder="https://i.imgur.com/..."
+            className="flex-1 rounded border border-border bg-muted px-2 py-1 text-[10px] outline-none focus:border-foreground"
+          />
+          <button
+            onClick={addUrl}
+            className="rounded border border-border px-2.5 py-1 text-[10px] hover:bg-accent"
+          >
+            Add
+          </button>
+        </div>
+      )}
+
+      {!canAdd && (
+        <p className="text-[10px] text-destructive">
+          Maximum {MAX_GALLERY_IMAGES} images reached. Remove one to add more.
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ── GitHub README Sync Panel ─────────────────────────────────────────────────
+function GitHubSyncPanel({
+  data,
+  patch,
+}: {
+  data: PortfolioData;
+  patch: (p: Partial<PortfolioData>) => void;
+}) {
+  const [token, setToken] = useState("");
+  const [syncing, setSyncing] = useState(false);
+  const [status, setStatus] = useState<{ ok: boolean; msg: string } | null>(null);
+  const enabled = data.githubSync ?? false;
+
+  async function handleSync() {
+    const username = data.github ? extractUsername(data.github) : "";
+    if (!username) { setStatus({ ok: false, msg: "Add your GitHub handle in the Content tab first." }); return; }
+    if (!token.trim()) { setStatus({ ok: false, msg: "Paste your GitHub Personal Access Token above." }); return; }
+    setSyncing(true);
+    setStatus(null);
+    const result = await pushPortfolioJson(username, token.trim(), data);
+    setSyncing(false);
+    if (result.ok) {
+      setStatus({ ok: true, msg: `✓ Synced! View at github.com/${username}/${username}/blob/main/portfolio.json` });
+    } else {
+      setStatus({ ok: false, msg: `✗ ${result.error}` });
+    }
+  }
+
+  return (
+    <div className="rounded-lg border border-border bg-background p-3 space-y-3">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <span className="block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+            GitHub README Sync
+          </span>
+          <p className="mt-0.5 text-[10px] text-muted-foreground leading-relaxed">
+            Auto-populate a <code className="rounded bg-muted px-1 py-0.5">portfolio.json</code> in your
+            GitHub profile repo (<code className="rounded bg-muted px-1 py-0.5">&lt;username&gt;/&lt;username&gt;</code>) and keep it in sync.
+          </p>
+        </div>
+        {/* Toggle */}
+        <button
+          onClick={() => patch({ githubSync: !enabled })}
+          aria-label={enabled ? "Disable GitHub sync" : "Enable GitHub sync"}
+          className={`relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition ${
+            enabled ? "bg-foreground" : "bg-muted-foreground/30"
+          }`}
+        >
+          <span
+            className={`absolute top-0.5 h-4 w-4 rounded-full bg-background shadow transition-all ${
+              enabled ? "left-4" : "left-0.5"
+            }`}
+          />
+        </button>
+      </div>
+
+      {enabled && (
+        <div className="space-y-2">
+          <div>
+            <label className="mb-1 block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              Personal Access Token
+            </label>
+            <input
+              type="password"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+              className="w-full rounded-md border border-border bg-muted px-3 py-1.5 text-xs outline-none focus:border-foreground font-mono"
+              autoComplete="off"
+            />
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              Needs <code className="rounded bg-muted px-1">public_repo</code> scope.
+              Token is never stored — only used for this request.
+            </p>
+          </div>
+
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="w-full rounded-md bg-foreground py-2 text-xs font-medium text-background hover:opacity-90 disabled:opacity-50 transition"
+          >
+            {syncing ? "Syncing…" : "↑ Push portfolio.json to GitHub"}
+          </button>
+
+          {status && (
+            <p className={`text-[10px] leading-relaxed ${ status.ok ? "text-green-600 dark:text-green-400" : "text-destructive" }`}>
+              {status.msg}
+            </p>
+          )}
+
+          <div className="rounded-md border border-border bg-muted/60 px-3 py-2 text-[10px] text-muted-foreground space-y-1">
+            <p className="font-medium text-foreground">What gets synced?</p>
+            <p>Your name, title, bio, skills, experience, education, projects (URLs only — base64 images are excluded), and links are written as structured JSON to your profile repo.</p>
+            <p>You can reference this file in your GitHub README to display a live portfolio badge or structured data.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -453,14 +735,20 @@ function ContentPanel({
         />
       </div>
 
-      {/* Avatar with upload — base64 stored locally */}
+      {/* Avatar */}
       <AvatarField value={data.avatar ?? ""} onChange={(v) => patch({ avatar: v })} />
+
+      {/* Profile Gallery */}
+      <ProfileGalleryField
+        images={data.galleryImages ?? []}
+        onChange={(imgs) => patch({ galleryImages: imgs })}
+      />
 
       <Field label="Email" value={data.email} onChange={(v) => patch({ email: v })} />
       <Field label="Website" value={data.website} onChange={(v) => patch({ website: v })} />
       <Field label="GitHub handle" value={data.github} onChange={(v) => patch({ github: v })} />
 
-      {/* Skills — isolated component, never re-initialised by store updates */}
+      {/* Skills */}
       <SkillsField
         initialSkills={Array.isArray(data.skills) ? data.skills : []}
         onCommit={(skills) => patch({ skills })}
@@ -487,6 +775,9 @@ function ContentPanel({
         fields={["label", "url"]}
         blank={{ label: "", url: "" }}
       />
+
+      {/* GitHub README Sync */}
+      <GitHubSyncPanel data={data} patch={patch} />
     </div>
   );
 }
@@ -512,12 +803,8 @@ function ImageCarousel({
   const all = images ?? [];
   const current = all[Math.min(idx, Math.max(0, all.length - 1))];
 
-  function prev() {
-    setIdx((i) => (i - 1 + all.length) % all.length);
-  }
-  function next() {
-    setIdx((i) => (i + 1) % all.length);
-  }
+  function prev() { setIdx((i) => (i - 1 + all.length) % all.length); }
+  function next() { setIdx((i) => (i + 1) % all.length); }
 
   function addUrl() {
     if (!newUrl.trim()) return;
@@ -531,7 +818,6 @@ function ImageCarousel({
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    // Convert to base64 — stored in React state + store, bundled in zip on download
     const dataUrl = await fileToDataUrl(file);
     const updated = [...all, dataUrl];
     onChange(updated);
@@ -558,48 +844,26 @@ function ImageCarousel({
 
   return (
     <div className="space-y-2">
-      {/* Image preview */}
       {all.length > 0 ? (
         <div className="relative overflow-hidden rounded-lg border border-border bg-muted">
           <img
             src={current}
             alt="project screenshot"
             className="h-36 w-full object-cover"
-            onError={(e) => {
-              (e.currentTarget as HTMLImageElement).src = "";
-            }}
+            onError={(e) => { (e.currentTarget as HTMLImageElement).src = ""; }}
           />
           {all.length > 1 && (
             <>
-              <button
-                onClick={prev}
-                className="absolute left-1 top-1/2 -translate-y-1/2 rounded-full bg-black/60 px-2.5 py-1 text-xs text-white"
-              >
-                ‹
-              </button>
-              <button
-                onClick={next}
-                className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full bg-black/60 px-2.5 py-1 text-xs text-white"
-              >
-                ›
-              </button>
+              <button onClick={prev} className="absolute left-1 top-1/2 -translate-y-1/2 rounded-full bg-black/60 px-2.5 py-1 text-xs text-white">‹</button>
+              <button onClick={next} className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full bg-black/60 px-2.5 py-1 text-xs text-white">›</button>
             </>
           )}
           <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1">
             {all.map((_, i) => (
-              <span
-                key={i}
-                className={`inline-block h-1.5 w-1.5 rounded-full transition ${i === idx ? "bg-white" : "bg-white/40"}`}
-              />
+              <span key={i} className={`inline-block h-1.5 w-1.5 rounded-full transition ${i === idx ? "bg-white" : "bg-white/40"}`} />
             ))}
           </div>
-          <button
-            onClick={removeCurrentImage}
-            title="Remove this image"
-            className="absolute right-1 top-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[9px] text-red-400 hover:text-red-300"
-          >
-            ✕
-          </button>
+          <button onClick={removeCurrentImage} title="Remove this image" className="absolute right-1 top-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[9px] text-red-400 hover:text-red-300">✕</button>
         </div>
       ) : (
         <div className="flex h-24 items-center justify-center rounded-lg border border-dashed border-border bg-muted/40">
@@ -607,36 +871,20 @@ function ImageCarousel({
         </div>
       )}
 
-      {/* Action buttons — all clearly visible */}
       <div className="flex flex-wrap gap-1.5">
-        {/* Upload from computer — most prominent */}
         <button
           type="button"
           onClick={() => uploadRef.current?.click()}
           className="flex items-center gap-1.5 rounded-md border border-border bg-muted px-2.5 py-1.5 text-[10px] font-medium hover:bg-accent hover:border-foreground transition"
         >
-          <svg
-            width="11"
-            height="11"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
             <polyline points="17 8 12 3 7 8" />
             <line x1="12" y1="3" x2="12" y2="15" />
           </svg>
           Upload image
         </button>
-        <input
-          ref={uploadRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleUpload}
-        />
-
+        <input ref={uploadRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
         <button
           onClick={captureScreenshot}
           disabled={capturing || (!liveUrl?.startsWith("http") && !ghUrl?.startsWith("http"))}
@@ -644,33 +892,17 @@ function ImageCarousel({
         >
           📸 {capturing ? "Capturing…" : "Screenshot"}
         </button>
-
         <button
           onClick={() => setAdding((a) => !a)}
           className="rounded-md border border-border bg-muted px-2.5 py-1.5 text-[10px] hover:bg-accent transition"
         >
           + Paste URL
         </button>
-
         {liveUrl?.startsWith("http") && (
-          <a
-            href={liveUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-md border border-border bg-muted px-2.5 py-1.5 text-[10px] hover:bg-accent transition"
-          >
-            ↗ Live
-          </a>
+          <a href={liveUrl} target="_blank" rel="noopener noreferrer" className="rounded-md border border-border bg-muted px-2.5 py-1.5 text-[10px] hover:bg-accent transition">↗ Live</a>
         )}
         {ghUrl?.startsWith("http") && (
-          <a
-            href={ghUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-md border border-border bg-muted px-2.5 py-1.5 text-[10px] hover:bg-accent transition"
-          >
-            ⌥ GitHub
-          </a>
+          <a href={ghUrl} target="_blank" rel="noopener noreferrer" className="rounded-md border border-border bg-muted px-2.5 py-1.5 text-[10px] hover:bg-accent transition">⌥ GitHub</a>
         )}
       </div>
 
@@ -684,12 +916,7 @@ function ImageCarousel({
             placeholder="https://i.imgur.com/..."
             className="flex-1 rounded border border-border bg-muted px-2 py-1 text-[10px] outline-none focus:border-foreground"
           />
-          <button
-            onClick={addUrl}
-            className="rounded border border-border px-2.5 py-1 text-[10px] hover:bg-accent"
-          >
-            Add
-          </button>
+          <button onClick={addUrl} className="rounded border border-border px-2.5 py-1 text-[10px] hover:bg-accent">Add</button>
         </div>
       )}
     </div>
@@ -716,16 +943,7 @@ function ProjectsPanel({
     patch({
       projects: [
         ...projects,
-        {
-          name: "New project",
-          description: "",
-          url: "",
-          githubUrl: "",
-          language: "",
-          image: "",
-          images: [],
-          include: true,
-        },
+        { name: "New project", description: "", url: "", githubUrl: "", language: "", image: "", images: [], include: true },
       ],
     });
   }
@@ -739,61 +957,32 @@ function ProjectsPanel({
       <div className="flex items-center justify-between">
         <div>
           <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Projects</div>
-          <div className="mt-0.5 text-xs text-muted-foreground">
-            {includedCount} of {projects.length} shown
-          </div>
+          <div className="mt-0.5 text-xs text-muted-foreground">{includedCount} of {projects.length} shown</div>
         </div>
         <div className="flex gap-1">
-          <button
-            onClick={() => toggleAll(true)}
-            className="rounded-full border border-border px-2 py-1 text-[10px] hover:bg-accent"
-          >
-            All
-          </button>
-          <button
-            onClick={() => toggleAll(false)}
-            className="rounded-full border border-border px-2 py-1 text-[10px] hover:bg-accent"
-          >
-            None
-          </button>
-          <button
-            onClick={add}
-            className="rounded-full bg-foreground px-2 py-1 text-[10px] text-background"
-          >
-            + Add
-          </button>
+          <button onClick={() => toggleAll(true)} className="rounded-full border border-border px-2 py-1 text-[10px] hover:bg-accent">All</button>
+          <button onClick={() => toggleAll(false)} className="rounded-full border border-border px-2 py-1 text-[10px] hover:bg-accent">None</button>
+          <button onClick={add} className="rounded-full bg-foreground px-2 py-1 text-[10px] text-background">+ Add</button>
         </div>
       </div>
 
       <div className="space-y-4">
-        {projects.length === 0 && (
-          <div className="text-xs text-muted-foreground">No projects yet.</div>
-        )}
+        {projects.length === 0 && <div className="text-xs text-muted-foreground">No projects yet.</div>}
         {projects.map((p, i) => {
           const on = p.include !== false;
           const allImgs = p.images?.length ? p.images : p.image ? [p.image] : [];
           return (
-            <div
-              key={i}
-              className={`rounded-xl border p-3 transition ${on ? "border-border bg-background" : "border-border bg-muted/40 opacity-60"}`}
-            >
+            <div key={i} className={`rounded-xl border p-3 transition ${on ? "border-border bg-background" : "border-border bg-muted/40 opacity-60"}`}>
               <div className="mb-3 flex items-center gap-2">
                 <button
                   onClick={() => updateAt(i, { include: !on })}
                   className={`relative h-4 w-7 shrink-0 rounded-full transition ${on ? "bg-foreground" : "bg-muted-foreground/40"}`}
                   aria-label={on ? "Hide project" : "Show project"}
                 >
-                  <span
-                    className={`absolute top-0.5 h-3 w-3 rounded-full bg-background transition-all ${on ? "left-3.5" : "left-0.5"}`}
-                  />
+                  <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-background transition-all ${on ? "left-3.5" : "left-0.5"}`} />
                 </button>
                 <span className="flex-1 truncate text-xs font-medium">{p.name || "Untitled"}</span>
-                <button
-                  onClick={() => removeAt(i)}
-                  className="shrink-0 text-[10px] text-destructive hover:underline"
-                >
-                  Delete
-                </button>
+                <button onClick={() => removeAt(i)} className="shrink-0 text-[10px] text-destructive hover:underline">Delete</button>
               </div>
 
               <ImageCarousel
@@ -804,36 +993,11 @@ function ProjectsPanel({
               />
 
               <div className="mt-3 space-y-1.5">
-                <input
-                  value={p.name ?? ""}
-                  placeholder="Project name"
-                  onChange={(e) => updateAt(i, { name: e.target.value })}
-                  className="w-full rounded-md border border-transparent bg-muted px-3 py-1.5 text-xs outline-none focus:border-border"
-                />
-                <input
-                  value={p.description ?? ""}
-                  placeholder="Short description"
-                  onChange={(e) => updateAt(i, { description: e.target.value })}
-                  className="w-full rounded-md border border-transparent bg-muted px-3 py-1.5 text-xs outline-none focus:border-border"
-                />
-                <input
-                  value={p.url ?? ""}
-                  placeholder="Live URL (https://...)"
-                  onChange={(e) => updateAt(i, { url: e.target.value })}
-                  className="w-full rounded-md border border-transparent bg-muted px-3 py-1.5 text-xs outline-none focus:border-border"
-                />
-                <input
-                  value={p.githubUrl ?? ""}
-                  placeholder="GitHub repo URL (optional)"
-                  onChange={(e) => updateAt(i, { githubUrl: e.target.value })}
-                  className="w-full rounded-md border border-transparent bg-muted px-3 py-1.5 text-xs outline-none focus:border-border"
-                />
-                <input
-                  value={p.language ?? ""}
-                  placeholder="Language / tech stack"
-                  onChange={(e) => updateAt(i, { language: e.target.value })}
-                  className="w-full rounded-md border border-transparent bg-muted px-3 py-1.5 text-xs outline-none focus:border-border"
-                />
+                <input value={p.name ?? ""} placeholder="Project name" onChange={(e) => updateAt(i, { name: e.target.value })} className="w-full rounded-md border border-transparent bg-muted px-3 py-1.5 text-xs outline-none focus:border-border" />
+                <input value={p.description ?? ""} placeholder="Short description" onChange={(e) => updateAt(i, { description: e.target.value })} className="w-full rounded-md border border-transparent bg-muted px-3 py-1.5 text-xs outline-none focus:border-border" />
+                <input value={p.url ?? ""} placeholder="Live URL (https://...)" onChange={(e) => updateAt(i, { url: e.target.value })} className="w-full rounded-md border border-transparent bg-muted px-3 py-1.5 text-xs outline-none focus:border-border" />
+                <input value={p.githubUrl ?? ""} placeholder="GitHub repo URL (optional)" onChange={(e) => updateAt(i, { githubUrl: e.target.value })} className="w-full rounded-md border border-transparent bg-muted px-3 py-1.5 text-xs outline-none focus:border-border" />
+                <input value={p.language ?? ""} placeholder="Language / tech stack" onChange={(e) => updateAt(i, { language: e.target.value })} className="w-full rounded-md border border-transparent bg-muted px-3 py-1.5 text-xs outline-none focus:border-border" />
               </div>
             </div>
           );
@@ -859,9 +1023,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-        {label}
-      </span>
+      <span className="mb-1.5 block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{label}</span>
       {textarea ? (
         <textarea
           value={value ?? ""}
@@ -897,9 +1059,7 @@ function ListEditor<T extends Record<string, any>>({
   return (
     <div className="rounded-lg border border-border p-3">
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          {label}
-        </span>
+        <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{label}</span>
         <button
           onClick={() => onChange([...items, { ...blank }])}
           className="rounded-full border border-border px-2 py-0.5 text-[10px] hover:bg-accent"
@@ -931,9 +1091,7 @@ function ListEditor<T extends Record<string, any>>({
             </button>
           </div>
         ))}
-        {(items ?? []).length === 0 && (
-          <div className="text-xs text-muted-foreground">Nothing yet.</div>
-        )}
+        {(items ?? []).length === 0 && <div className="text-xs text-muted-foreground">Nothing yet.</div>}
       </div>
     </div>
   );

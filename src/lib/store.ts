@@ -16,6 +16,8 @@ export const emptyPortfolio: PortfolioData = {
   education: [],
   projects: [],
   links: [],
+  galleryImages: [],
+  githubSync: false,
 };
 
 interface Store {

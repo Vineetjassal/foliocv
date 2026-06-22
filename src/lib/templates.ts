@@ -1,495 +1,427 @@
-import type { PortfolioData, TemplateId, Project } from "./types";
+import type { PortfolioData, TemplateId } from "./types";
 
-const esc = (s: string) =>
-  String(s ?? "").replace(
-    /[&<>"']/g,
-    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
-  );
-
-const visible = (projects: Project[]) => projects.filter((p) => p.include !== false);
-
-/** Merge legacy p.image into p.images array */
-function allMedia(p: Project): { type: "img" | "video"; src: string }[] {
-  const imgs: string[] = p.images?.length ? p.images : p.image ? [p.image] : [];
-  const vids: string[] = p.videos ?? [];
-  return [
-    ...imgs.map((src) => ({ type: "img" as const, src })),
-    ...vids.map((src) => ({ type: "video" as const, src })),
-  ];
-}
-
-/** Returns true if the string looks like a YouTube URL */
-function isYouTube(url: string) {
-  return /youtu\.be\/|youtube\.com\/watch/.test(url);
-}
-
-function youTubeEmbed(url: string) {
-  // Convert watch?v=ID or youtu.be/ID to embed URL
-  const m = url.match(/(?:v=|youtu\.be\/)([\w-]+)/);
-  return m ? `https://www.youtube.com/embed/${m[1]}?rel=0` : url;
-}
-
-/** Inline JS for carousel — injected once into the page */
-const carouselScript = `
+// ── Shared gallery carousel HTML generator ────────────────────────────────────
+function gallerySection(images: string[]): string {
+  if (!images || images.length === 0) return "";
+  const dots = images
+    .map(
+      (_, i) =>
+        `<button class="gallery-dot${i === 0 ? " active" : ""}" onclick="galleryGoTo(${i})" aria-label="Image ${i + 1}"></button>`,
+    )
+    .join("");
+  const imgs = images
+    .map(
+      (src, i) =>
+        `<img src="${src}" alt="Gallery image ${i + 1}" class="gallery-img${i === 0 ? " active" : ""}" loading="lazy" />`,
+    )
+    .join("");
+  return `
+<section class="gallery-section">
+  <h2 class="section-title">Gallery</h2>
+  <div class="gallery-carousel" id="galleryCarousel">
+    <div class="gallery-track">${imgs}</div>
+    <button class="gallery-btn gallery-prev" onclick="galleryPrev()" aria-label="Previous">&#8249;</button>
+    <button class="gallery-btn gallery-next" onclick="galleryNext()" aria-label="Next">&#8250;</button>
+    <div class="gallery-counter" id="galleryCounter">1 / ${images.length}</div>
+    <div class="gallery-dots" id="galleryDots">${dots}</div>
+  </div>
+</section>
 <script>
 (function(){
-  function initCarousels() {
-    document.querySelectorAll('.carousel').forEach(function(el) {
-      var slides = el.querySelectorAll('.c-slide');
-      var dots = el.querySelectorAll('.c-dot');
-      var idx = 0;
-      if (slides.length < 2) return;
-      function go(n) {
-        slides[idx].classList.remove('active');
-        if(dots[idx]) dots[idx].classList.remove('active');
-        idx = (n + slides.length) % slides.length;
-        slides[idx].classList.add('active');
-        if(dots[idx]) dots[idx].classList.add('active');
-      }
-      el.querySelector('.c-prev')?.addEventListener('click', function(e){ e.preventDefault(); go(idx-1); });
-      el.querySelector('.c-next')?.addEventListener('click', function(e){ e.preventDefault(); go(idx+1); });
-      dots.forEach(function(d,i){ d.addEventListener('click', function(){ go(i); }); });
-    });
+  var imgs = document.querySelectorAll('.gallery-img');
+  var dots = document.querySelectorAll('.gallery-dot');
+  var counter = document.getElementById('galleryCounter');
+  var cur = 0;
+  function show(n){
+    imgs[cur].classList.remove('active');
+    dots[cur].classList.remove('active');
+    cur = (n + imgs.length) % imgs.length;
+    imgs[cur].classList.add('active');
+    dots[cur].classList.add('active');
+    if(counter) counter.textContent = (cur+1) + ' / ' + imgs.length;
   }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initCarousels);
-  } else {
-    initCarousels();
-  }
+  window.galleryGoTo = show;
+  window.galleryPrev = function(){ show(cur - 1); };
+  window.galleryNext = function(){ show(cur + 1); };
+  // Keyboard & swipe
+  document.addEventListener('keydown', function(e){
+    if(e.key==='ArrowLeft') window.galleryPrev();
+    if(e.key==='ArrowRight') window.galleryNext();
+  });
+  var ts=0;
+  document.getElementById('galleryCarousel').addEventListener('touchstart',function(e){ts=e.touches[0].clientX;},{passive:true});
+  document.getElementById('galleryCarousel').addEventListener('touchend',function(e){
+    var dx=e.changedTouches[0].clientX-ts;
+    if(Math.abs(dx)>40){if(dx<0)window.galleryNext();else window.galleryPrev();}
+  },{passive:true});
 })();
-</script>`;
+<\/script>`;
+}
 
-/** CSS for carousel — added to baseCss */
-const carouselCss = `
-.carousel { position: relative; width: 100%; overflow: hidden; background: var(--card); }
-.c-slide { display: none; }
-.c-slide.active { display: block; }
-.c-slide img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; background: var(--card); }
-.c-slide video { width: 100%; aspect-ratio: 16/9; display: block; background: #000; }
-.c-slide iframe { width: 100%; aspect-ratio: 16/9; display: block; border: none; }
-.c-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,.55); color: #fff; border: none; cursor: pointer; border-radius: 999px; width: 28px; height: 28px; display: grid; place-items: center; font-size: 14px; z-index: 2; }
-.c-prev { left: 8px; }
-.c-next { right: 8px; }
-.c-dots { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; z-index: 2; }
-.c-dot { width: 6px; height: 6px; border-radius: 999px; background: rgba(255,255,255,.35); cursor: pointer; border: none; padding: 0; transition: background .2s; }
-.c-dot.active { background: rgba(255,255,255,.9); }
-.proj-links { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
-.proj-links a { font-size: 0.75rem; padding: 3px 10px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); transition: border-color .2s, color .2s; }
-.proj-links a:hover { color: var(--fg); border-color: var(--fg); }
+const galleryCss = `
+/* ── Profile Gallery Carousel ─────────────────────────── */
+.gallery-section { margin-block: 3rem; }
+.gallery-carousel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  background: var(--c-surface, #111);
+  aspect-ratio: 16/9;
+  max-height: 520px;
+  user-select: none;
+}
+.gallery-track { position: relative; width: 100%; height: 100%; }
+.gallery-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+.gallery-img.active { opacity: 1; pointer-events: auto; }
+.gallery-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  border: none;
+  border-radius: 9999px;
+  width: 2.5rem;
+  height: 2.5rem;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+.gallery-btn:hover { background: rgba(0,0,0,0.8); }
+.gallery-prev { left: 0.75rem; }
+.gallery-next { right: 0.75rem; }
+.gallery-counter {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  padding: 0.2rem 0.6rem;
+  z-index: 2;
+  letter-spacing: 0.05em;
+}
+.gallery-dots {
+  position: absolute;
+  bottom: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.4rem;
+  z-index: 2;
+}
+.gallery-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.4);
+  border: none;
+  cursor: pointer;
+  transition: width 0.2s, background 0.2s;
+  padding: 0;
+}
+.gallery-dot.active {
+  width: 1.25rem;
+  background: #fff;
+}
 `;
 
-/** Build a carousel HTML block for a project */
-function carouselHtml(p: Project): string {
-  const media = allMedia(p);
-  if (media.length === 0) return "";
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function esc(s: string | undefined | null): string {
+  return (s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
 
-  const slideHtml = media
-    .map((m, i) => {
-      let inner = "";
-      if (m.type === "video") {
-        if (isYouTube(m.src)) {
-          inner = `<iframe src="${esc(youTubeEmbed(m.src))}" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>`;
-        } else {
-          inner = `<video controls preload="none" src="${esc(m.src)}"></video>`;
-        }
-      } else {
-        inner = `<img loading="lazy" src="${esc(m.src)}" alt="${esc(p.name)} screenshot ${i + 1}" onerror="this.parentElement.style.display='none'" />`;
-      }
-      return `<div class="c-slide${i === 0 ? " active" : ""}">${inner}</div>`;
+function skillBadges(skills: string[]): string {
+  return (skills ?? [])
+    .map((s) => `<span class="skill-badge">${esc(s)}</span>`)
+    .join("");
+}
+
+function projectCards(data: PortfolioData): string {
+  return (data.projects ?? [])
+    .filter((p) => p.include !== false)
+    .map((p) => {
+      const allImgs = p.images?.length ? p.images : p.image ? [p.image] : [];
+      const imgHtml =
+        allImgs.length > 0
+          ? `<img src="${esc(allImgs[0])}" alt="${esc(p.name)}" class="project-img" loading="lazy" />`
+          : "";
+      return `
+<div class="project-card">
+  ${imgHtml}
+  <div class="project-body">
+    <div class="project-title">${esc(p.name)}</div>
+    ${p.description ? `<div class="project-desc">${esc(p.description)}</div>` : ""}
+    ${p.language ? `<div class="project-lang">${esc(p.language)}</div>` : ""}
+    <div class="project-links">
+      ${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener">Live ↗</a>` : ""}
+      ${p.githubUrl ? `<a href="${esc(p.githubUrl)}" target="_blank" rel="noopener">GitHub ↗</a>` : ""}
+    </div>
+  </div>
+</div>`;
     })
     .join("");
-
-  const arrows =
-    media.length > 1
-      ? `<button class="c-nav c-prev" aria-label="Previous">&#8249;</button>
-       <button class="c-nav c-next" aria-label="Next">&#8250;</button>`
-      : "";
-
-  const dotsHtml =
-    media.length > 1
-      ? `<div class="c-dots">${media.map((_, i) => `<button class="c-dot${i === 0 ? " active" : ""}" aria-label="Slide ${i + 1}"></button>`).join("")}</div>`
-      : "";
-
-  return `<div class="carousel">${slideHtml}${arrows}${dotsHtml}</div>`;
 }
 
-/** Project links row */
-function projLinks(p: Project): string {
-  const links: string[] = [];
-  if (p.url?.startsWith("http"))
-    links.push(`<a href="${esc(p.url)}" target="_blank" rel="noopener">&nearr; Live</a>`);
-  if (p.githubUrl?.startsWith("http"))
-    links.push(`<a href="${esc(p.githubUrl)}" target="_blank" rel="noopener">&equiv; GitHub</a>`);
-  return links.length ? `<div class="proj-links">${links.join("")}</div>` : "";
+function expItems(data: PortfolioData): string {
+  return (data.experience ?? [])
+    .map(
+      (e) => `
+<div class="exp-item">
+  <div class="exp-row"><span class="exp-role">${esc(e.role)}</span><span class="exp-period">${esc(e.period)}</span></div>
+  <div class="exp-company">${esc(e.company)}</div>
+  ${e.description ? `<div class="exp-desc">${esc(e.description)}</div>` : ""}
+</div>`,
+    )
+    .join("");
 }
 
-const sharedHead = (data: PortfolioData) => `
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>${esc(data.name)} — ${esc(data.title)}</title>
-<meta name="description" content="${esc(data.bio).slice(0, 160)}" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" />
-<link rel="stylesheet" href="./styles.css" />`;
+function eduItems(data: PortfolioData): string {
+  return (data.education ?? [])
+    .map(
+      (e) => `
+<div class="edu-item">
+  <div class="edu-row"><span class="edu-degree">${esc(e.degree)}</span><span class="edu-period">${esc(e.period)}</span></div>
+  <div class="edu-school">${esc(e.school)}</div>
+</div>`,
+    )
+    .join("");
+}
 
-const sharedThemeScript = `
-<script>
-  (function () {
-    const saved = localStorage.getItem('theme');
-    const prefers = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (saved === 'light' || (!saved && !prefers)) document.documentElement.classList.add('light');
-    window.toggleTheme = function () {
-      document.documentElement.classList.toggle('light');
-      localStorage.setItem('theme', document.documentElement.classList.contains('light') ? 'light' : 'dark');
-    };
-  })();
-</script>`;
-
-const themeToggle = `
-<button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
-</button>`;
+function socialLinks(data: PortfolioData): string {
+  const items = [];
+  if (data.email) items.push(`<a href="mailto:${esc(data.email)}">Email</a>`);
+  if (data.website) items.push(`<a href="${esc(data.website)}" target="_blank" rel="noopener">Website</a>`);
+  if (data.github) items.push(`<a href="https://github.com/${esc(data.github)}" target="_blank" rel="noopener">GitHub</a>`);
+  (data.links ?? []).forEach((l) => {
+    if (l.url) items.push(`<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label) || "Link"}</a>`);
+  });
+  return items.join("");
+}
 
 const baseCss = `
-:root {
-  --bg: #0a0a0a; --fg: #f5f5f5; --muted: #8a8a8a; --border: #1f1f1f; --card: #111;
-  --accent: #f5f5f5;
-}
-:root.light {
-  --bg: #fbfbfb; --fg: #111; --muted: #666; --border: #e6e6e6; --card: #fff;
-  --accent: #111;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { background: var(--bg); color: var(--fg); font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; transition: background .3s, color .3s; }
-a { color: inherit; text-decoration: none; border-bottom: 1px solid var(--border); transition: border-color .2s; }
-a:hover { border-color: var(--fg); }
-.serif { font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; letter-spacing: -0.01em; }
-.mono { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; }
-.muted { color: var(--muted); }
-.theme-toggle {
-  position: fixed; top: 24px; right: 24px; z-index: 50;
-  background: var(--card); border: 1px solid var(--border); color: var(--fg);
-  width: 36px; height: 36px; border-radius: 999px; display: grid; place-items: center; cursor: pointer;
-  transition: transform .2s;
-}
-.theme-toggle:hover { transform: scale(1.06); }
-.badge { display: inline-block; padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px; font-size: 0.75rem; color: var(--muted); }
-.reveal { opacity: 0; transform: translateY(12px); animation: reveal .7s ease forwards; }
-@keyframes reveal { to { opacity: 1; transform: none; } }
-.reveal:nth-child(2) { animation-delay: .08s; }
-.reveal:nth-child(3) { animation-delay: .16s; }
-.reveal:nth-child(4) { animation-delay: .24s; }
-.reveal:nth-child(5) { animation-delay: .32s; }
-${carouselCss}`;
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.6}
+img{display:block;max-width:100%;height:auto}
+a{color:inherit;text-decoration:none}
+a:hover{text-decoration:underline}
+.skill-badge{display:inline-block;border:1px solid currentColor;border-radius:9999px;padding:.15em .7em;font-size:.7rem;opacity:.7;margin:.15rem}
+.project-card{border:1px solid var(--c-border,rgba(128,128,128,.2));border-radius:.75rem;overflow:hidden;transition:transform .2s,box-shadow .2s}
+.project-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.15)}
+.project-img{width:100%;height:160px;object-fit:cover}
+.project-body{padding:1rem}
+.project-title{font-weight:600;margin-bottom:.25rem}
+.project-desc{font-size:.85rem;opacity:.7;margin-bottom:.5rem}
+.project-lang{font-size:.75rem;opacity:.5;margin-bottom:.5rem;font-family:monospace}
+.project-links{display:flex;gap:.75rem;font-size:.8rem;opacity:.8}
+.exp-item,.edu-item{border-bottom:1px solid var(--c-border,rgba(128,128,128,.15));padding:.75rem 0}
+.exp-item:last-child,.edu-item:last-child{border-bottom:none}
+.exp-row,.edu-row{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem}
+.exp-role,.edu-degree{font-weight:600;font-size:.9rem}
+.exp-period,.edu-period{font-size:.75rem;opacity:.5;white-space:nowrap}
+.exp-company,.edu-school{font-size:.85rem;opacity:.7;margin:.1rem 0}
+.exp-desc{font-size:.82rem;opacity:.6;margin-top:.35rem}
+.social-links{display:flex;flex-wrap:wrap;gap:.5rem 1rem;font-size:.82rem;opacity:.7}
+.section-title{font-size:.7rem;text-transform:uppercase;letter-spacing:.18em;opacity:.5;margin-bottom:1.25rem}
+${galleryCss}
+`;
 
-const templateCss: Record<TemplateId, string> = {
-  centered: `
-.wrap { max-width: 640px; margin: 0 auto; padding: 120px 28px 96px; }
-.avatar { width: 72px; height: 72px; border-radius: 999px; object-fit: cover; margin-bottom: 32px; border: 1px solid var(--border); }
-h1.name { font-size: 2.2rem; letter-spacing: -0.02em; font-weight: 500; }
-.title { color: var(--muted); margin-top: 6px; }
-.bio { margin-top: 28px; font-size: 1.05rem; line-height: 1.6; color: var(--fg); }
-.about { margin-top: 16px; font-size: 1rem; line-height: 1.7; color: var(--muted); white-space: pre-wrap; }
-.section { margin-top: 56px; }
-.section h2 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); margin-bottom: 18px; font-weight: 500; }
-.row { display: flex; justify-content: space-between; gap: 16px; padding: 14px 0; border-top: 1px solid var(--border); }
-.row:last-child { border-bottom: 1px solid var(--border); }
-.row .right { color: var(--muted); font-size: 0.9rem; white-space: nowrap; }
-.row .desc { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
-.proj-card { padding: 18px 0; border-top: 1px solid var(--border); }
-.proj-card:last-child { border-bottom: 1px solid var(--border); }
-.proj-card .carousel { border-radius: 8px; overflow: hidden; margin-bottom: 12px; border: 1px solid var(--border); }
-.proj-card .body a { font-weight: 500; border-bottom: none; }
-.proj-card .body a:hover { border-bottom: 1px solid var(--fg); }
-.proj-card .body p { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
-.proj-card .meta { color: var(--muted); font-size: 0.78rem; margin-top: 6px; font-family: 'JetBrains Mono', monospace; }
-.skills { display: flex; flex-wrap: wrap; gap: 8px; }
-.links { display: flex; flex-wrap: wrap; gap: 8px 18px; }
-.links a { border-bottom: none; color: var(--muted); }
-.links a:hover { color: var(--fg); }
-`,
-  split: `
-.layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
-.sidebar { padding: 56px 32px; border-right: 1px solid var(--border); position: sticky; top: 0; height: 100vh; overflow-y: auto; }
-.main { padding: 56px 56px 96px; max-width: 760px; }
-.avatar { width: 84px; height: 84px; border-radius: 12px; object-fit: cover; margin-bottom: 20px; border: 1px solid var(--border); }
-h1.name { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.01em; }
-.title { color: var(--muted); margin-top: 4px; font-size: 0.95rem; }
-.bio { margin-top: 20px; font-size: 0.9rem; line-height: 1.6; color: var(--muted); }
-.side-section { margin-top: 28px; }
-.side-section h3 { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); margin-bottom: 10px; }
-.side-section a { display: block; border-bottom: none; padding: 4px 0; color: var(--fg); font-size: 0.9rem; }
-.section { margin-bottom: 56px; }
-.section h2 { font-size: 1.6rem; font-weight: 500; letter-spacing: -0.01em; margin-bottom: 24px; }
-.about { font-size: 1rem; line-height: 1.7; color: var(--muted); white-space: pre-wrap; }
-.card { padding: 20px 0; border-top: 1px solid var(--border); display: grid; grid-template-columns: 120px 1fr; gap: 24px; }
-.card:last-child { border-bottom: 1px solid var(--border); }
-.card .meta { color: var(--muted); font-size: 0.85rem; }
-.card h4 { font-weight: 500; font-size: 1rem; }
-.card .sub { color: var(--muted); font-size: 0.9rem; margin-top: 2px; }
-.card p { color: var(--muted); font-size: 0.9rem; margin-top: 8px; line-height: 1.55; }
-.proj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
-.proj { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; transition: border-color .2s, transform .2s; display: block; }
-.proj:hover { border-color: var(--fg); transform: translateY(-2px); }
-.proj .carousel { border-bottom: 1px solid var(--border); }
-.proj .body { padding: 14px; }
-.proj h5 { font-weight: 500; font-size: 0.95rem; }
-.proj p { color: var(--muted); font-size: 0.85rem; margin-top: 6px; }
-.proj .row { display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.72rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; border: none; padding: 0; }
-.skills { display: flex; flex-wrap: wrap; gap: 8px; }
-@media (max-width: 800px) {
-  .layout { grid-template-columns: 1fr; }
-  .sidebar { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
-  .main { padding: 40px 24px 80px; }
-  .card { grid-template-columns: 1fr; gap: 4px; }
-}
-`,
-  editorial: `
-.wrap { max-width: 1100px; margin: 0 auto; padding: 64px 32px 96px; }
-.hero { padding: 80px 0 64px; border-bottom: 1px solid var(--border); }
-.eyebrow { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.18em; color: var(--muted); }
-h1.name { font-family: 'Instrument Serif', Georgia, serif; font-size: clamp(3rem, 8vw, 6rem); line-height: 1; margin-top: 18px; letter-spacing: -0.02em; font-weight: 400; }
-.title { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: clamp(1.4rem, 3vw, 2rem); color: var(--muted); margin-top: 8px; }
-.bio { max-width: 620px; margin-top: 36px; font-size: 1.1rem; line-height: 1.6; }
-.meta-row { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 28px; color: var(--muted); font-size: 0.85rem; }
-.grid { display: grid; grid-template-columns: 200px 1fr; gap: 56px; padding: 56px 0; border-bottom: 1px solid var(--border); }
-.grid h2 { font-family: 'Instrument Serif', Georgia, serif; font-size: 1.8rem; font-weight: 400; }
-.about { font-size: 1.05rem; line-height: 1.75; white-space: pre-wrap; }
-.entry { padding: 14px 0; }
-.entry + .entry { border-top: 1px solid var(--border); }
-.entry h4 { font-size: 1.05rem; font-weight: 500; }
-.entry .sub { color: var(--muted); font-size: 0.9rem; margin-top: 2px; }
-.entry p { color: var(--muted); font-size: 0.92rem; margin-top: 8px; line-height: 1.55; }
-.proj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
-.proj { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; transition: border-color .2s, transform .2s; display: block; }
-.proj:hover { border-color: var(--fg); transform: translateY(-2px); }
-.proj .carousel { border-bottom: 1px solid var(--border); }
-.proj .body { padding: 16px; }
-.proj h5 { font-weight: 500; font-size: 0.95rem; }
-.proj p { color: var(--muted); font-size: 0.85rem; margin-top: 6px; min-height: 40px; }
-.proj .row { display: flex; justify-content: space-between; margin-top: 12px; font-size: 0.72rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; border: none; padding: 0; }
-.skills { display: flex; flex-wrap: wrap; gap: 8px; }
-@media (max-width: 760px) { .grid { grid-template-columns: 1fr; gap: 20px; padding: 40px 0; } }
-`,
-};
+// ── Centered (Quiet) template ────────────────────────────────────────────────
+function buildCentered(data: PortfolioData): { html: string; css: string } {
+  const gallery = data.galleryImages?.length ? gallerySection(data.galleryImages) : "";
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>${esc(data.name)} — Portfolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body class="centered-body">
+<main class="centered-main">
+  ${data.avatar ? `<img src="${esc(data.avatar)}" alt="${esc(data.name)}" class="centered-avatar" loading="eager" />` : ""}
+  <h1 class="centered-name">${esc(data.name)}</h1>
+  ${data.title ? `<div class="centered-title">${esc(data.title)}</div>` : ""}
+  ${data.location ? `<div class="centered-location">${esc(data.location)}</div>` : ""}
+  ${data.bio ? `<p class="centered-bio">${esc(data.bio)}</p>` : ""}
+  <div class="social-links centered-links">${socialLinks(data)}</div>
 
-// ── Project card builders using carousel ─────────────────────────────────────
+  ${gallery}
 
-function projCardCentered(p: Project) {
-  const media = allMedia(p);
-  return `<div class="proj-card">
-    ${carouselHtml(p)}
-    <div class="body">
-      <a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.name)}</a>
-      ${p.description ? `<p>${esc(p.description)}</p>` : ""}
-      <div class="meta">${p.language ? esc(p.language) : ""}${p.stars ? `  ★ ${p.stars}` : ""}</div>
-      ${projLinks(p)}
-    </div>
-  </div>`;
+  ${data.about ? `<section class="centered-section"><h2 class="section-title">About</h2><p class="centered-about">${esc(data.about)}</p></section>` : ""}
+
+  ${data.skills?.length ? `<section class="centered-section"><h2 class="section-title">Skills</h2><div>${skillBadges(data.skills)}</div></section>` : ""}
+
+  ${data.experience?.length ? `<section class="centered-section"><h2 class="section-title">Experience</h2>${expItems(data)}</section>` : ""}
+
+  ${data.education?.length ? `<section class="centered-section"><h2 class="section-title">Education</h2>${eduItems(data)}</section>` : ""}
+
+  ${data.projects?.filter((p) => p.include !== false).length ? `<section class="centered-section"><h2 class="section-title">Projects</h2><div class="project-grid">${projectCards(data)}</div></section>` : ""}
+</main>
+</body>
+</html>`;
+
+  const css = baseCss + `
+body.centered-body{background:#0d0d0d;color:#e8e6e1}
+body.light.centered-body{background:#faf9f7;color:#1a1a1a}
+.centered-main{max-width:640px;margin:0 auto;padding:4rem 1.5rem 6rem}
+.centered-avatar{width:72px;height:72px;border-radius:50%;object-fit:cover;margin:0 auto 1.5rem}
+.centered-name{font-family:'EB Garamond',Georgia,serif;font-size:clamp(2rem,5vw,3rem);font-weight:400;text-align:center;letter-spacing:-.02em;margin-bottom:.35rem}
+.centered-title{text-align:center;font-size:.85rem;opacity:.55;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.2rem}
+.centered-location{text-align:center;font-size:.8rem;opacity:.4;margin-bottom:.75rem}
+.centered-bio{text-align:center;font-size:1rem;opacity:.7;max-width:48ch;margin:0 auto 1.5rem;line-height:1.65}
+.centered-links{justify-content:center;margin-bottom:2.5rem}
+.centered-section{margin-bottom:2.5rem}
+.centered-about{font-size:.95rem;opacity:.75;line-height:1.8;max-width:64ch}
+.project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem}
+`;
+
+  return { html, css };
 }
 
-function projCardGrid(p: Project) {
-  return `<div class="proj">
-    ${carouselHtml(p)}
-    <div class="body">
-      <h5>${esc(p.name)}</h5>
-      ${p.description ? `<p>${esc(p.description)}</p>` : ""}
-      <div class="row"><span>${p.language ? esc(p.language) : ""}</span><span>${p.stars ? `★ ${p.stars}` : ""}</span></div>
-      ${projLinks(p)}
-    </div>
-  </div>`;
-}
-
-// ── Template HTML builders ────────────────────────────────────────────────────
-
-function centeredHtml(d: PortfolioData) {
-  const projects = visible(d.projects);
-  return `<div class="wrap">
-  ${d.avatar ? `<img class="avatar reveal" src="${esc(d.avatar)}" alt="${esc(d.name)}" />` : ""}
-  <div class="reveal">
-    <h1 class="name serif">${esc(d.name)}</h1>
-    <div class="title">${esc(d.title)}${d.location ? ` · ${esc(d.location)}` : ""}</div>
-  </div>
-  ${d.bio ? `<p class="bio reveal">${esc(d.bio)}</p>` : ""}
-  ${d.about ? `<section class="section reveal"><h2>About</h2><p class="about">${esc(d.about)}</p></section>` : ""}
-  ${
-    d.experience.length
-      ? `<section class="section reveal">
-    <h2>Work</h2>
-    ${d.experience.map((e) => `<div class="row"><div><div>${esc(e.role)}</div><div class="desc">${esc(e.company)}${e.description ? ` — ${esc(e.description)}` : ""}</div></div><div class="right mono">${esc(e.period)}</div></div>`).join("")}
-  </section>`
-      : ""
-  }
-  ${
-    projects.length
-      ? `<section class="section reveal">
-    <h2>Projects</h2>
-    ${projects.slice(0, 8).map(projCardCentered).join("")}
-  </section>`
-      : ""
-  }
-  ${
-    d.education.length
-      ? `<section class="section reveal">
-    <h2>Education</h2>
-    ${d.education.map((e) => `<div class="row"><div><div>${esc(e.degree)}</div><div class="desc">${esc(e.school)}</div></div><div class="right mono">${esc(e.period)}</div></div>`).join("")}
-  </section>`
-      : ""
-  }
-  ${
-    d.skills.length
-      ? `<section class="section reveal">
-    <h2>Skills</h2>
-    <div class="skills">${d.skills.map((s) => `<span class="badge">${esc(s)}</span>`).join("")}</div>
-  </section>`
-      : ""
-  }
-  <section class="section reveal">
-    <h2>Elsewhere</h2>
-    <div class="links">
-      ${d.email ? `<a href="mailto:${esc(d.email)}">Email</a>` : ""}
-      ${d.github ? `<a href="https://github.com/${esc(d.github)}" target="_blank" rel="noopener">GitHub</a>` : ""}
-      ${d.website ? `<a href="${esc(d.website)}" target="_blank" rel="noopener">Website</a>` : ""}
-      ${d.links.map((l) => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join("")}
-    </div>
-  </section>
-</div>`;
-}
-
-function splitHtml(d: PortfolioData) {
-  const projects = visible(d.projects);
-  return `<div class="layout">
-  <aside class="sidebar">
-    ${d.avatar ? `<img class="avatar" src="${esc(d.avatar)}" alt="${esc(d.name)}" />` : ""}
-    <h1 class="name">${esc(d.name)}</h1>
-    <div class="title">${esc(d.title)}</div>
-    ${d.location ? `<div class="title">${esc(d.location)}</div>` : ""}
-    ${d.bio ? `<p class="bio">${esc(d.bio)}</p>` : ""}
-    <div class="side-section">
-      <h3>Contact</h3>
-      ${d.email ? `<a href="mailto:${esc(d.email)}">${esc(d.email)}</a>` : ""}
-      ${d.github ? `<a href="https://github.com/${esc(d.github)}" target="_blank" rel="noopener">github.com/${esc(d.github)}</a>` : ""}
-      ${d.website ? `<a href="${esc(d.website)}" target="_blank" rel="noopener">${esc(d.website)}</a>` : ""}
-      ${d.links.map((l) => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join("")}
-    </div>
+// ── Split (Studio) template ──────────────────────────────────────────────────
+function buildSplit(data: PortfolioData): { html: string; css: string } {
+  const gallery = data.galleryImages?.length ? gallerySection(data.galleryImages) : "";
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>${esc(data.name)} — Portfolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body class="split-body">
+<div class="split-layout">
+  <aside class="split-sidebar">
+    ${data.avatar ? `<img src="${esc(data.avatar)}" alt="${esc(data.name)}" class="split-avatar" loading="eager" />` : ""}
+    <h1 class="split-name">${esc(data.name)}</h1>
+    ${data.title ? `<div class="split-title">${esc(data.title)}</div>` : ""}
+    ${data.location ? `<div class="split-location">${esc(data.location)}</div>` : ""}
+    ${data.bio ? `<p class="split-bio">${esc(data.bio)}</p>` : ""}
+    <nav class="social-links split-links">${socialLinks(data)}</nav>
+    ${data.skills?.length ? `<div class="split-skills-section"><div class="section-title">Skills</div>${skillBadges(data.skills)}</div>` : ""}
   </aside>
-  <main class="main">
-    ${d.about ? `<section class="section reveal"><h2 class="serif">About</h2><p class="about">${esc(d.about)}</p></section>` : ""}
-    ${
-      d.experience.length
-        ? `<section class="section reveal">
-      <h2 class="serif">Experience</h2>
-      ${d.experience.map((e) => `<div class="card"><div class="meta mono">${esc(e.period)}</div><div><h4>${esc(e.role)}</h4><div class="sub">${esc(e.company)}</div>${e.description ? `<p>${esc(e.description)}</p>` : ""}</div></div>`).join("")}
-    </section>`
-        : ""
-    }
-    ${
-      projects.length
-        ? `<section class="section reveal">
-      <h2 class="serif">Projects</h2>
-      <div class="proj-grid">${projects.slice(0, 9).map(projCardGrid).join("")}</div>
-    </section>`
-        : ""
-    }
-    ${
-      d.education.length
-        ? `<section class="section reveal">
-      <h2 class="serif">Education</h2>
-      ${d.education.map((e) => `<div class="card"><div class="meta mono">${esc(e.period)}</div><div><h4>${esc(e.degree)}</h4><div class="sub">${esc(e.school)}</div></div></div>`).join("")}
-    </section>`
-        : ""
-    }
-    ${
-      d.skills.length
-        ? `<section class="section reveal">
-      <h2 class="serif">Skills</h2>
-      <div class="skills">${d.skills.map((s) => `<span class="badge">${esc(s)}</span>`).join("")}</div>
-    </section>`
-        : ""
-    }
+  <main class="split-content">
+    ${gallery}
+    ${data.about ? `<section class="split-section"><h2 class="section-title">About</h2><p class="split-about">${esc(data.about)}</p></section>` : ""}
+    ${data.experience?.length ? `<section class="split-section"><h2 class="section-title">Experience</h2>${expItems(data)}</section>` : ""}
+    ${data.education?.length ? `<section class="split-section"><h2 class="section-title">Education</h2>${eduItems(data)}</section>` : ""}
+    ${data.projects?.filter((p) => p.include !== false).length ? `<section class="split-section"><h2 class="section-title">Projects</h2><div class="project-grid">${projectCards(data)}</div></section>` : ""}
   </main>
-</div>`;
+</div>
+</body>
+</html>`;
+
+  const css = baseCss + `
+body.split-body{background:#0c0c0c;color:#dbd9d4;min-height:100vh}
+body.light.split-body{background:#f7f6f4;color:#1c1b18}
+.split-layout{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
+@media(max-width:768px){.split-layout{grid-template-columns:1fr}}
+.split-sidebar{position:sticky;top:0;height:100vh;overflow-y:auto;padding:2.5rem 1.75rem;border-right:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;gap:.5rem}
+body.light .split-sidebar{border-right-color:rgba(0,0,0,.08)}
+.split-avatar{width:64px;height:64px;border-radius:.5rem;object-fit:cover;margin-bottom:.75rem}
+.split-name{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:700;letter-spacing:-.02em;line-height:1.2;margin-bottom:.2rem}
+.split-title{font-size:.75rem;text-transform:uppercase;letter-spacing:.12em;opacity:.45;margin-bottom:.15rem}
+.split-location{font-size:.78rem;opacity:.35;margin-bottom:.75rem}
+.split-bio{font-size:.85rem;opacity:.65;line-height:1.65;margin-bottom:1rem}
+.split-links{flex-direction:column;gap:.35rem;margin-bottom:1.25rem}
+.split-skills-section{margin-top:auto;padding-top:1.5rem}
+.split-content{padding:3rem 2.5rem;max-width:800px}
+@media(max-width:768px){.split-content{padding:2rem 1.5rem}}
+.split-section{margin-bottom:3rem}
+.split-about{font-size:.95rem;opacity:.75;line-height:1.8;max-width:60ch}
+.project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem}
+--c-border: rgba(255,255,255,.1);
+`;
+
+  return { html, css };
 }
 
-function editorialHtml(d: PortfolioData) {
-  const projects = visible(d.projects);
-  return `<div class="wrap">
-  <header class="hero">
-    <div class="eyebrow reveal">Portfolio · ${new Date().getFullYear()}</div>
-    <h1 class="name reveal">${esc(d.name)}</h1>
-    <div class="title reveal">${esc(d.title)}</div>
-    ${d.bio ? `<p class="bio reveal">${esc(d.bio)}</p>` : ""}
-    <div class="meta-row reveal">
-      ${d.location ? `<span>${esc(d.location)}</span>` : ""}
-      ${d.email ? `<a href="mailto:${esc(d.email)}">${esc(d.email)}</a>` : ""}
-      ${d.github ? `<a href="https://github.com/${esc(d.github)}" target="_blank" rel="noopener">github.com/${esc(d.github)}</a>` : ""}
-      ${d.website ? `<a href="${esc(d.website)}" target="_blank" rel="noopener">${esc(d.website)}</a>` : ""}
+// ── Editorial template ────────────────────────────────────────────────────────
+function buildEditorial(data: PortfolioData): { html: string; css: string } {
+  const gallery = data.galleryImages?.length ? gallerySection(data.galleryImages) : "";
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>${esc(data.name)} — Portfolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body class="ed-body">
+<header class="ed-header">
+  <div class="ed-header-inner">
+    <div class="ed-header-text">
+      <h1 class="ed-name">${esc(data.name)}</h1>
+      ${data.title ? `<div class="ed-title">${esc(data.title)}</div>` : ""}
+      ${data.bio ? `<p class="ed-bio">${esc(data.bio)}</p>` : ""}
+      <nav class="social-links ed-links">${socialLinks(data)}</nav>
     </div>
-  </header>
-  ${d.about ? `<section class="grid"><h2>About</h2><div><p class="about">${esc(d.about)}</p></div></section>` : ""}
-  ${
-    d.experience.length
-      ? `<section class="grid">
-    <h2>Selected<br/>work</h2>
-    <div>${d.experience.map((e) => `<div class="entry"><h4>${esc(e.role)} <span class="mono muted"> · ${esc(e.period)}</span></h4><div class="sub">${esc(e.company)}</div>${e.description ? `<p>${esc(e.description)}</p>` : ""}</div>`).join("")}</div>
-  </section>`
-      : ""
-  }
-  ${
-    projects.length
-      ? `<section class="grid">
-    <h2>Projects</h2>
-    <div class="proj-grid">${projects.slice(0, 12).map(projCardGrid).join("")}</div>
-  </section>`
-      : ""
-  }
-  ${
-    d.education.length
-      ? `<section class="grid">
-    <h2>Education</h2>
-    <div>${d.education.map((e) => `<div class="entry"><h4>${esc(e.degree)}</h4><div class="sub">${esc(e.school)} · ${esc(e.period)}</div></div>`).join("")}</div>
-  </section>`
-      : ""
-  }
-  ${
-    d.skills.length
-      ? `<section class="grid">
-    <h2>Toolkit</h2>
-    <div class="skills">${d.skills.map((s) => `<span class="badge">${esc(s)}</span>`).join("")}</div>
-  </section>`
-      : ""
-  }
-  ${
-    d.links.length
-      ? `<section class="grid">
-    <h2>Elsewhere</h2>
-    <div>${d.links.map((l) => `<div class="entry"><h4><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a></h4></div>`).join("")}</div>
-  </section>`
-      : ""
-  }
-</div>`;
+    ${data.avatar ? `<img src="${esc(data.avatar)}" alt="${esc(data.name)}" class="ed-avatar" loading="eager" />` : ""}
+  </div>
+</header>
+<main class="ed-main">
+  ${gallery}
+  <div class="ed-grid">
+    ${data.about ? `<section class="ed-section ed-span2"><h2 class="section-title">About</h2><p class="ed-about">${esc(data.about)}</p></section>` : ""}
+    ${data.skills?.length ? `<section class="ed-section"><h2 class="section-title">Skills</h2><div>${skillBadges(data.skills)}</div></section>` : ""}
+    ${data.experience?.length ? `<section class="ed-section ed-span2"><h2 class="section-title">Experience</h2>${expItems(data)}</section>` : ""}
+    ${data.education?.length ? `<section class="ed-section"><h2 class="section-title">Education</h2>${eduItems(data)}</section>` : ""}
+  </div>
+  ${data.projects?.filter((p) => p.include !== false).length ? `<section class="ed-projects"><h2 class="section-title">Projects</h2><div class="project-grid">${projectCards(data)}</div></section>` : ""}
+</main>
+</body>
+</html>`;
+
+  const css = baseCss + `
+body.ed-body{background:#f9f7f3;color:#1a1814;min-height:100vh}
+body.light.ed-body{background:#f9f7f3;color:#1a1814}
+.ed-header{background:#1a1814;color:#f0ede8;padding:4rem 0 3rem}
+.ed-header-inner{max-width:1100px;margin:0 auto;padding:0 2rem;display:flex;align-items:flex-start;gap:2.5rem;justify-content:space-between}
+.ed-header-text{flex:1}
+.ed-name{font-family:'Playfair Display',Georgia,serif;font-size:clamp(2.5rem,6vw,5rem);font-weight:700;letter-spacing:-.03em;line-height:1.05;margin-bottom:.4rem}
+.ed-title{font-size:.8rem;text-transform:uppercase;letter-spacing:.2em;opacity:.5;margin-bottom:1rem}
+.ed-bio{font-size:1.05rem;opacity:.7;max-width:52ch;line-height:1.7;margin-bottom:1.25rem}
+.ed-links{opacity:.7}
+.ed-avatar{width:140px;height:140px;border-radius:.5rem;object-fit:cover;flex-shrink:0}
+.ed-main{max-width:1100px;margin:0 auto;padding:3rem 2rem 5rem}
+.ed-grid{display:grid;grid-template-columns:1fr 1fr;gap:2.5rem 3rem;margin-bottom:3rem}
+@media(max-width:768px){.ed-grid{grid-template-columns:1fr}}
+.ed-section{}
+.ed-span2{grid-column:span 2}
+@media(max-width:768px){.ed-span2{grid-column:span 1}}
+.ed-about{font-size:1rem;line-height:1.8;opacity:.8;max-width:64ch}
+.ed-projects{margin-top:1rem}
+.project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.25rem;margin-top:1rem}
+`;
+
+  return { html, css };
 }
 
+// ── Public API ────────────────────────────────────────────────────────────────
 export function buildSite(
   data: PortfolioData,
   template: TemplateId,
 ): { html: string; css: string } {
-  const body =
-    template === "centered"
-      ? centeredHtml(data)
-      : template === "split"
-        ? splitHtml(data)
-        : editorialHtml(data);
-  const html = `<!doctype html>
-<html lang="en">
-<head>${sharedHead(data)}${sharedThemeScript}</head>
-<body>
-${themeToggle}
-${body}
-${carouselScript}
-</body>
-</html>`;
-  const css = baseCss + templateCss[template];
-  return { html, css };
+  if (template === "split") return buildSplit(data);
+  if (template === "editorial") return buildEditorial(data);
+  return buildCentered(data);
 }

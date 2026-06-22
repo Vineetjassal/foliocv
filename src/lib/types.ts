@@ -28,4 +28,8 @@ export interface PortfolioData {
   education: { degree: string; school: string; period: string }[];
   projects: Project[];
   links: { label: string; url: string }[];
+  /** Profile gallery — up to 15 images shown as a carousel on the profile */
+  galleryImages?: string[];
+  /** GitHub README sync — when true, portfolio.json is pushed to the user's GitHub profile repo */
+  githubSync?: boolean;
 }
