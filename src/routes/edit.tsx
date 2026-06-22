@@ -7,13 +7,7 @@ import { enhanceBio } from "@/lib/aiBio";
 import { screenshotUrl, pushPortfolioJson, extractUsername } from "@/lib/github";
 import type { PortfolioData, Project, TemplateId } from "@/lib/types";
 import { toggleAppTheme, useAppTheme } from "./__root";
-
-// ── New feature imports ───────────────────────────────────────────────────────
-import { PortfolioShareCard } from "@/components/PortfolioShareCard";
-import { VercelDeployPanel } from "@/components/VercelDeployPanel";
-import { GitHubPagesDeployPanel } from "@/components/GitHubPagesDeployPanel";
 import { SortableSectionList, type Section } from "@/components/SortableSectionList";
-import { LinkedInImport, type LinkedInProfile } from "@/components/LinkedInImport";
 
 export const Route = createFileRoute("/edit")({
   head: () => ({ meta: [{ title: "Editor — FolioCV" }] }),
@@ -24,6 +18,8 @@ const TEMPLATES: { id: TemplateId; name: string; tagline: string }[] = [
   { id: "centered", name: "Quiet", tagline: "Centered & minimal · read.cv inspired" },
   { id: "split", name: "Studio", tagline: "Sidebar + content · structured" },
   { id: "editorial", name: "Editorial", tagline: "Bold serif · magazine layout" },
+  { id: "aurora", name: "Aurora", tagline: "Dark gradient · glassmorphism" },
+  { id: "minimal", name: "Minimal", tagline: "Clean light · typographic" },
 ];
 
 const DEFAULT_SECTIONS: Section[] = [
@@ -187,7 +183,7 @@ function SkillsField({
 function Editor() {
   const navigate = useNavigate();
   const { data, template, patch, setTemplate } = useStore();
-  const [tab, setTab] = useState<"design" | "content" | "projects" | "share">("design");
+  const [tab, setTab] = useState<"design" | "content" | "projects">("design");
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeTheme, setIframeTheme] = useState<"dark" | "light">("dark");
   const [deviceMode, setDeviceMode] = useState<DeviceMode>("desktop");
@@ -254,35 +250,9 @@ function Editor() {
     URL.revokeObjectURL(url);
   }
 
-  // LinkedIn import handler — merge data into portfolio
-  function handleLinkedInImport(profile: LinkedInProfile) {
-    const updates: Partial<PortfolioData> = {};
-    if (profile.firstName || profile.lastName)
-      updates.name = [profile.firstName, profile.lastName].filter(Boolean).join(" ");
-    if (profile.headline) updates.title = profile.headline;
-    if (profile.summary) updates.bio = profile.summary;
-    if (profile.skills?.length)
-      updates.skills = profile.skills.map((s) => s.name).filter(Boolean);
-    if (profile.positions?.length)
-      updates.experience = profile.positions.map((p) => ({
-        role: p.title ?? "",
-        company: p.companyName ?? "",
-        period: [p.startDate, p.endDate].filter(Boolean).join(" – ") || "",
-        description: p.description ?? "",
-      }));
-    if (profile.education?.length)
-      updates.education = profile.education.map((e) => ({
-        degree: [e.degreeName, e.fieldOfStudy].filter(Boolean).join(" in ") || "",
-        school: e.schoolName ?? "",
-        period: [e.startDate, e.endDate].filter(Boolean).join(" – ") || "",
-      }));
-    patch(updates);
-  }
-
   if (!data) return null;
 
   const device = DEVICE_CONFIG[deviceMode];
-  const portfolioUrl = typeof window !== "undefined" ? window.location.origin + "/edit" : "";
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
@@ -340,7 +310,7 @@ function Editor() {
         {/* ── Sidebar ── */}
         <aside className="flex w-[380px] shrink-0 flex-col border-r border-border bg-card">
           <div className="flex border-b border-border text-xs">
-            {(["design", "content", "projects", "share"] as const).map((t) => (
+            {(["design", "content", "projects"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -348,7 +318,7 @@ function Editor() {
                   tab === t ? "bg-background text-foreground" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {t === "share" ? "Share & Deploy" : t}
+                {t}
               </button>
             ))}
           </div>
@@ -394,14 +364,6 @@ function Editor() {
             )}
             {tab === "content" && <ContentPanel data={data} patch={patch} />}
             {tab === "projects" && <ProjectsPanel data={data} patch={patch} />}
-            {tab === "share" && (
-              <ShareDeployPanel
-                data={data}
-                patch={patch}
-                portfolioUrl={portfolioUrl}
-                onLinkedInImport={handleLinkedInImport}
-              />
-            )}
           </div>
         </aside>
 
@@ -462,74 +424,6 @@ function Editor() {
   );
 }
 
-// ── Share & Deploy Panel ─────────────────────────────────────────────────────
-function ShareDeployPanel({
-  data,
-  patch,
-  portfolioUrl,
-  onLinkedInImport,
-}: {
-  data: PortfolioData;
-  patch: (p: Partial<PortfolioData>) => void;
-  portfolioUrl: string;
-  onLinkedInImport: (profile: LinkedInProfile) => void;
-}) {
-  const [expandedSection, setExpandedSection] = useState<string | null>("share");
-
-  const toggle = (key: string) =>
-    setExpandedSection((prev) => (prev === key ? null : key));
-
-  const sections = [
-    { key: "share", label: "Share Portfolio" },
-    { key: "vercel", label: "Deploy to Vercel" },
-    { key: "ghpages", label: "Deploy to GitHub Pages" },
-    { key: "linkedin", label: "Import from LinkedIn" },
-  ];
-
-  return (
-    <div className="space-y-3">
-      <p className="text-[10px] text-muted-foreground uppercase tracking-[0.18em] mb-4">
-        Share & Deploy
-      </p>
-
-      {sections.map(({ key, label }) => (
-        <div key={key} className="rounded-xl border border-border overflow-hidden">
-          <button
-            onClick={() => toggle(key)}
-            className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium hover:bg-accent transition"
-          >
-            <span>{label}</span>
-            <svg
-              width="14" height="14" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" strokeWidth="2"
-              className={`transition-transform ${expandedSection === key ? "rotate-180" : ""}`}
-            >
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </button>
-
-          {expandedSection === key && (
-            <div className="border-t border-border p-4 bg-background">
-              {key === "share" && (
-                <PortfolioShareCard
-                  portfolioUrl={portfolioUrl}
-                  userName={data.name || "My Portfolio"}
-                  title={data.title ? `${data.name} — ${data.title}` : "Check out my portfolio!"}
-                />
-              )}
-              {key === "vercel" && <VercelDeployPanel />}
-              {key === "ghpages" && <GitHubPagesDeployPanel />}
-              {key === "linkedin" && (
-                <LinkedInImport onImport={onLinkedInImport} />
-              )}
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function TemplatePreview({ id }: { id: TemplateId }) {
   return (
     <div className="mt-3 h-16 w-full overflow-hidden rounded-md border border-border bg-background">
@@ -558,6 +452,37 @@ function TemplatePreview({ id }: { id: TemplateId }) {
             <rect x="10" y="40" width="50" height="14" fill="currentColor" opacity="0.2" />
             <rect x="68" y="40" width="50" height="14" fill="currentColor" opacity="0.2" />
             <rect x="126" y="40" width="50" height="14" fill="currentColor" opacity="0.2" />
+          </>
+        )}
+        {id === "aurora" && (
+          <>
+            <defs>
+              <linearGradient id="auroraGrad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.8" />
+                <stop offset="50%" stopColor="#0ea5e9" stopOpacity="0.8" />
+                <stop offset="100%" stopColor="#10b981" stopOpacity="0.8" />
+              </linearGradient>
+            </defs>
+            <rect x="0" y="0" width="200" height="60" fill="#04050d" />
+            <ellipse cx="40" cy="20" rx="35" ry="25" fill="#7c3aed" opacity="0.18" />
+            <ellipse cx="160" cy="40" rx="40" ry="22" fill="#0ea5e9" opacity="0.15" />
+            <circle cx="30" cy="18" r="8" fill="url(#auroraGrad)" opacity="0.9" />
+            <rect x="46" y="13" width="60" height="4" rx="2" fill="url(#auroraGrad)" opacity="0.9" />
+            <rect x="46" y="22" width="40" height="2" rx="1" fill="#a78bfa" opacity="0.5" />
+            <rect x="10" y="36" width="180" height="14" rx="4" fill="white" opacity="0.04" />
+          </>
+        )}
+        {id === "minimal" && (
+          <>
+            <rect x="0" y="0" width="200" height="60" fill="white" />
+            <rect x="10" y="8" width="100" height="6" rx="1" fill="#111" opacity="0.8" />
+            <rect x="10" y="18" width="60" height="2" rx="1" fill="#888" opacity="0.6" />
+            <rect x="10" y="24" width="180" height="1" fill="#111" opacity="0.9" />
+            <rect x="10" y="32" width="110" height="2" rx="1" fill="#333" opacity="0.3" />
+            <rect x="10" y="38" width="110" height="2" rx="1" fill="#333" opacity="0.3" />
+            <rect x="10" y="44" width="80" height="2" rx="1" fill="#333" opacity="0.3" />
+            <rect x="140" y="32" width="50" height="2" rx="1" fill="#ccc" opacity="0.6" />
+            <rect x="140" y="38" width="40" height="2" rx="1" fill="#ccc" opacity="0.6" />
           </>
         )}
       </svg>
