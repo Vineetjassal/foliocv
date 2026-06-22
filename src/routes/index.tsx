@@ -226,7 +226,6 @@ function Landing() {
             "100% browser-based",
             "Download clean code",
             "Dark mode included",
-            "Open source",
           ].map((f) => (
             <span key={f} className="flex items-center gap-1.5">
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
