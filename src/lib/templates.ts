@@ -1,938 +1,716 @@
 import type { PortfolioData, TemplateId } from "./types";
 
-// ── Shared gallery carousel HTML generator ────────────────────────────────────
-function gallerySection(images: string[]): string {
-  if (!images || images.length === 0) return "";
-  const dots = images
-    .map(
-      (_, i) =>
-        `<button class="gallery-dot${i === 0 ? " active" : ""}" onclick="galleryGoTo(${i})" aria-label="Image ${i + 1}"></button>`,
-    )
-    .join("");
-  const imgs = images
-    .map(
-      (src, i) =>
-        `<img src="${src}" alt="Gallery image ${i + 1}" class="gallery-img${i === 0 ? " active" : ""}" loading="lazy" />`,
-    )
-    .join("");
-  return `
-<section class="gallery-section">
-  <h2 class="section-title">Gallery</h2>
-  <div class="gallery-carousel" id="galleryCarousel">
-    <div class="gallery-track">${imgs}</div>
-    <button class="gallery-btn gallery-prev" onclick="galleryPrev()" aria-label="Previous">&#8249;</button>
-    <button class="gallery-btn gallery-next" onclick="galleryNext()" aria-label="Next">&#8250;</button>
-    <div class="gallery-counter" id="galleryCounter">1 / ${images.length}</div>
-    <div class="gallery-dots" id="galleryDots">${dots}</div>
-  </div>
-</section>
-<script>
-(function(){
-  var imgs = document.querySelectorAll('.gallery-img');
-  var dots = document.querySelectorAll('.gallery-dot');
-  var counter = document.getElementById('galleryCounter');
-  var cur = 0;
-  function show(n){
-    imgs[cur].classList.remove('active');
-    dots[cur].classList.remove('active');
-    cur = (n + imgs.length) % imgs.length;
-    imgs[cur].classList.add('active');
-    dots[cur].classList.add('active');
-    if(counter) counter.textContent = (cur+1) + ' / ' + imgs.length;
-  }
-  window.galleryGoTo = show;
-  window.galleryPrev = function(){ show(cur - 1); };
-  window.galleryNext = function(){ show(cur + 1); };
-  document.addEventListener('keydown', function(e){
-    if(e.key==='ArrowLeft') window.galleryPrev();
-    if(e.key==='ArrowRight') window.galleryNext();
-  });
-  var ts=0;
-  document.getElementById('galleryCarousel').addEventListener('touchstart',function(e){ts=e.touches[0].clientX;},{passive:true});
-  document.getElementById('galleryCarousel').addEventListener('touchend',function(e){
-    var dx=e.changedTouches[0].clientX-ts;
-    if(Math.abs(dx)>40){if(dx<0)window.galleryNext();else window.galleryPrev();}
-  },{passive:true});
-})();
-<\/script>`;
-}
-
-const galleryCss = `
-/* ── Profile Gallery Carousel ─────────────────────────── */
-.gallery-section { margin-block: 3rem; }
-.gallery-carousel {
-  position: relative;
-  overflow: hidden;
-  border-radius: 0.75rem;
-  background: var(--c-surface, #111);
-  aspect-ratio: 16/9;
-  max-height: 520px;
-  user-select: none;
-}
-.gallery-track { position: relative; width: 100%; height: 100%; }
-.gallery-img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0;
-  transition: opacity 0.4s ease;
-  pointer-events: none;
-}
-.gallery-img.active { opacity: 1; pointer-events: auto; }
-.gallery-btn {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  background: rgba(0,0,0,0.55);
-  color: #fff;
-  border: none;
-  border-radius: 9999px;
-  width: 2.5rem;
-  height: 2.5rem;
-  font-size: 1.4rem;
-  line-height: 1;
-  cursor: pointer;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s;
-}
-.gallery-btn:hover { background: rgba(0,0,0,0.8); }
-.gallery-prev { left: 0.75rem; }
-.gallery-next { right: 0.75rem; }
-.gallery-counter {
-  position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
-  background: rgba(0,0,0,0.55);
-  color: #fff;
-  border-radius: 9999px;
-  font-size: 0.7rem;
-  padding: 0.2rem 0.6rem;
-  z-index: 2;
-  letter-spacing: 0.05em;
-}
-.gallery-dots {
-  position: absolute;
-  bottom: 0.75rem;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 0.4rem;
-  z-index: 2;
-}
-.gallery-dot {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 9999px;
-  background: rgba(255,255,255,0.4);
-  border: none;
-  cursor: pointer;
-  transition: width 0.2s, background 0.2s;
-  padding: 0;
-}
-.gallery-dot.active {
-  width: 1.25rem;
-  background: #fff;
-}
-`;
-
-// ── Dark / Light toggle injected into every generated portfolio ───────────────
-const themeSwitcherHtml = `
-<!-- FolioCV theme toggle -->
-<button
-  id="folio-theme-btn"
-  onclick="folioToggleTheme()"
-  aria-label="Toggle dark / light mode"
-  title="Toggle dark / light mode"
-  style="
-    position:fixed;bottom:1.25rem;right:1.25rem;z-index:9999;
-    width:2.5rem;height:2.5rem;
-    border-radius:50%;border:1.5px solid rgba(128,128,128,0.3);
-    background:rgba(30,30,30,0.85);color:#f0f0f0;
-    display:flex;align-items:center;justify-content:center;
-    cursor:pointer;font-size:1rem;line-height:1;
-    box-shadow:0 4px 16px rgba(0,0,0,0.25);
-    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-    transition:background 0.25s,color 0.25s,border-color 0.25s,transform 0.15s;
-  "
->🌙</button>
-<script>
-(function(){
-  var btn = document.getElementById('folio-theme-btn');
-  var root = document.documentElement;
-  var DARK_ICON = '🌙';
-  var LIGHT_ICON = '☀️';
-  var KEY = 'folio-theme';
-
-  function applyTheme(mode) {
-    if (mode === 'light') {
-      root.classList.add('light');
-      root.classList.remove('dark');
-      if (btn) {
-        btn.textContent = DARK_ICON;
-        btn.style.background = 'rgba(240,240,240,0.9)';
-        btn.style.color = '#111';
-        btn.style.borderColor = 'rgba(0,0,0,0.15)';
-      }
-    } else {
-      root.classList.remove('light');
-      root.classList.add('dark');
-      if (btn) {
-        btn.textContent = LIGHT_ICON;
-        btn.style.background = 'rgba(20,20,20,0.9)';
-        btn.style.color = '#f0f0f0';
-        btn.style.borderColor = 'rgba(255,255,255,0.15)';
-      }
-    }
-    try { localStorage.setItem(KEY, mode); } catch(e){}
-  }
-
-  window.folioToggleTheme = function() {
-    var current = root.classList.contains('light') ? 'light' : 'dark';
-    applyTheme(current === 'light' ? 'dark' : 'light');
-  };
-
-  // Respect saved preference, else system preference
-  var saved = null;
-  try { saved = localStorage.getItem(KEY); } catch(e){}
-  var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  var initial = saved || (prefersDark ? 'dark' : 'light');
-  applyTheme(initial);
-
-  // Watch system pref changes (only if no saved pref)
-  if (window.matchMedia) {
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
-      var hasSaved = false;
-      try { hasSaved = !!localStorage.getItem(KEY); } catch(x){}
-      if (!hasSaved) applyTheme(e.matches ? 'dark' : 'light');
-    });
-  }
-})();
-<\/script>`;
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── helpers ────────────────────────────────────────────────────────────────────
 function esc(s: string | undefined | null): string {
   return (s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
-
 function skillBadges(skills: string[]): string {
-  return (skills ?? [])
-    .map((s) => `<span class="skill-badge">${esc(s)}</span>`)
-    .join("");
+  return (skills ?? []).map(s => `<span class="badge">${esc(s)}</span>`).join("");
 }
-
-function projectCards(data: PortfolioData): string {
-  return (data.projects ?? [])
-    .filter((p) => p.include !== false)
-    .map((p) => {
-      const allImgs = p.images?.length ? p.images : p.image ? [p.image] : [];
-      const imgHtml =
-        allImgs.length > 0
-          ? `<img src="${esc(allImgs[0])}" alt="${esc(p.name)}" class="project-img" loading="lazy" />`
-          : "";
-      return `
-<div class="project-card">
-  ${imgHtml}
-  <div class="project-body">
-    <div class="project-title">${esc(p.name)}</div>
-    ${p.description ? `<div class="project-desc">${esc(p.description)}</div>` : ""}
-    ${p.language ? `<div class="project-lang">${esc(p.language)}</div>` : ""}
-    <div class="project-links">
+function socialLinks(data: PortfolioData): string {
+  const i: string[] = [];
+  if (data.email) i.push(`<a href="mailto:${esc(data.email)}">Email</a>`);
+  if (data.website) i.push(`<a href="${esc(data.website)}" target="_blank" rel="noopener">Website</a>`);
+  if (data.github) i.push(`<a href="https://github.com/${esc(data.github)}" target="_blank" rel="noopener">GitHub</a>`);
+  (data.links ?? []).forEach(l => { if (l.url) i.push(`<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label) || "Link"}</a>`); });
+  return i.join("");
+}
+function projectCards(data: PortfolioData, cls = ""): string {
+  return (data.projects ?? []).filter(p => p.include !== false).map(p => {
+    const img = (p.images?.length ? p.images[0] : p.image) ?? "";
+    return `<div class="pcard${cls ? " " + cls : ""}">
+  ${img ? `<img src="${esc(img)}" alt="${esc(p.name)}" class="pcard-img" loading="lazy" />` : ""}
+  <div class="pcard-body">
+    <div class="pcard-name">${esc(p.name)}</div>
+    ${p.description ? `<div class="pcard-desc">${esc(p.description)}</div>` : ""}
+    ${p.language ? `<div class="pcard-lang">${esc(p.language)}</div>` : ""}
+    <div class="pcard-links">
       ${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener">Live ↗</a>` : ""}
-      ${p.githubUrl ? `<a href="${esc(p.githubUrl)}" target="_blank" rel="noopener">GitHub ↗</a>` : ""}
+      ${p.githubUrl ? `<a href="${esc(p.githubUrl)}" target="_blank" rel="noopener">Code ↗</a>` : ""}
     </div>
   </div>
 </div>`;
-    })
-    .join("");
+  }).join("");
 }
-
 function expItems(data: PortfolioData): string {
-  return (data.experience ?? [])
-    .map(
-      (e) => `
-<div class="exp-item">
-  <div class="exp-row"><span class="exp-role">${esc(e.role)}</span><span class="exp-period">${esc(e.period)}</span></div>
-  <div class="exp-company">${esc(e.company)}</div>
+  return (data.experience ?? []).map(e => `<div class="exp">
+  <div class="exp-top"><span class="exp-role">${esc(e.role)}</span><span class="exp-period">${esc(e.period)}</span></div>
+  <div class="exp-co">${esc(e.company)}</div>
   ${e.description ? `<div class="exp-desc">${esc(e.description)}</div>` : ""}
-</div>`,
-    )
-    .join("");
+</div>`).join("");
 }
-
 function eduItems(data: PortfolioData): string {
-  return (data.education ?? [])
-    .map(
-      (e) => `
-<div class="edu-item">
-  <div class="edu-row"><span class="edu-degree">${esc(e.degree)}</span><span class="edu-period">${esc(e.period)}</span></div>
+  return (data.education ?? []).map(e => `<div class="edu">
+  <div class="edu-top"><span class="edu-deg">${esc(e.degree)}</span><span class="edu-period">${esc(e.period)}</span></div>
   <div class="edu-school">${esc(e.school)}</div>
-</div>`,
-    )
-    .join("");
+</div>`).join("");
+}
+function gallerySection(images: string[]): string {
+  if (!images?.length) return "";
+  const imgs = images.map((s, i) => `<img src="${s}" alt="Gallery ${i+1}" class="gl-img${i===0?" active":""}" loading="lazy" />`).join("");
+  const dots = images.map((_, i) => `<button class="gl-dot${i===0?" active":""}" onclick="glTo(${i})" aria-label="Slide ${i+1}"></button>`).join("");
+  return `<div class="gl" id="gl">
+  <div class="gl-track">${imgs}</div>
+  <button class="gl-arrow gl-prev" onclick="glPrev()" aria-label="Prev">‹</button>
+  <button class="gl-arrow gl-next" onclick="glNext()" aria-label="Next">›</button>
+  <div class="gl-dots">${dots}</div>
+</div>
+<script>(function(){var I=document.querySelectorAll('.gl-img'),D=document.querySelectorAll('.gl-dot'),c=0;function go(n){I[c].classList.remove('active');D[c].classList.remove('active');c=(n+I.length)%I.length;I[c].classList.add('active');D[c].classList.add('active');}window.glTo=go;window.glPrev=function(){go(c-1);};window.glNext=function(){go(c+1);};var t=0;var el=document.getElementById('gl');el.addEventListener('touchstart',function(e){t=e.touches[0].clientX;},{passive:true});el.addEventListener('touchend',function(e){var d=e.changedTouches[0].clientX-t;if(Math.abs(d)>40){d<0?glNext():glPrev();}},{passive:true});})();<\/script>`;
 }
 
-function socialLinks(data: PortfolioData): string {
-  const items = [];
-  if (data.email) items.push(`<a href="mailto:${esc(data.email)}">Email</a>`);
-  if (data.website) items.push(`<a href="${esc(data.website)}" target="_blank" rel="noopener">Website</a>`);
-  if (data.github) items.push(`<a href="https://github.com/${esc(data.github)}" target="_blank" rel="noopener">GitHub</a>`);
-  (data.links ?? []).forEach((l) => {
-    if (l.url) items.push(`<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label) || "Link"}</a>`);
+// ── shared toggle script injected into every portfolio ─────────────────────
+const themeToggle = `<button id="tt" onclick="tToggle()" aria-label="Toggle theme" title="Toggle dark/light"
+style="position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;width:2.75rem;height:2.75rem;border-radius:50%;
+border:1.5px solid rgba(128,128,128,.25);cursor:pointer;font-size:1.1rem;display:flex;align-items:center;
+justify-content:center;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+box-shadow:0 4px 20px rgba(0,0,0,.3);transition:all .25s;"></button>
+<script>(function(){
+  var b=document.getElementById('tt'),r=document.documentElement,K='folio-theme';
+  function apply(m){
+    r.dataset.theme=m;
+    b.textContent=m==='dark'?'☀️':'🌙';
+    b.style.background=m==='dark'?'rgba(20,20,20,.9)':'rgba(248,248,248,.9)';
+    b.style.color=m==='dark'?'#f0f0f0':'#111';
+    try{localStorage.setItem(K,m);}catch(e){}
+  }
+  window.tToggle=function(){apply(r.dataset.theme==='dark'?'light':'dark');};
+  var saved=null;try{saved=localStorage.getItem(K);}catch(e){}
+  apply(saved||(window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'));
+  window.matchMedia('(prefers-color-scheme:dark)').addEventListener('change',function(e){
+    var s=null;try{s=localStorage.getItem(K);}catch(x){}if(!s)apply(e.matches?'dark':'light');
   });
-  return items.join("");
-}
+})();<\/script>`;
 
-const baseCss = `
+const sharedCss = `
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.6}
+html{scroll-behavior:smooth}
+body{line-height:1.6;-webkit-font-smoothing:antialiased}
 img{display:block;max-width:100%;height:auto}
 a{color:inherit;text-decoration:none}
 a:hover{text-decoration:underline}
-.skill-badge{display:inline-block;border:1px solid currentColor;border-radius:9999px;padding:.15em .7em;font-size:.7rem;opacity:.7;margin:.15rem}
-.project-card{border:1px solid var(--c-border,rgba(128,128,128,.2));border-radius:.75rem;overflow:hidden;transition:transform .2s,box-shadow .2s}
-.project-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.15)}
-.project-img{width:100%;height:160px;object-fit:cover}
-.project-body{padding:1rem}
-.project-title{font-weight:600;margin-bottom:.25rem}
-.project-desc{font-size:.85rem;opacity:.7;margin-bottom:.5rem}
-.project-lang{font-size:.75rem;opacity:.5;margin-bottom:.5rem;font-family:monospace}
-.project-links{display:flex;gap:.75rem;font-size:.8rem;opacity:.8}
-.exp-item,.edu-item{border-bottom:1px solid var(--c-border,rgba(128,128,128,.15));padding:.75rem 0}
-.exp-item:last-child,.edu-item:last-child{border-bottom:none}
-.exp-row,.edu-row{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem}
-.exp-role,.edu-degree{font-weight:600;font-size:.9rem}
-.exp-period,.edu-period{font-size:.75rem;opacity:.5;white-space:nowrap}
-.exp-company,.edu-school{font-size:.85rem;opacity:.7;margin:.1rem 0}
-.exp-desc{font-size:.82rem;opacity:.6;margin-top:.35rem}
-.social-links{display:flex;flex-wrap:wrap;gap:.5rem 1rem;font-size:.82rem;opacity:.7}
-.section-title{font-size:.7rem;text-transform:uppercase;letter-spacing:.18em;opacity:.5;margin-bottom:1.25rem}
-${galleryCss}
-`;
-
-// ── Centered (Quiet) template ────────────────────────────────────────────────
-function buildCentered(data: PortfolioData): { html: string; css: string } {
-  const gallery = data.galleryImages?.length ? gallerySection(data.galleryImages) : "";
-  const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>${esc(data.name)} — Portfolio</title>
-<meta name="description" content="${esc(data.bio || data.about || data.name + "'s portfolio")}" />
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
-</head>
-<body class="centered-body">
-<main class="centered-main">
-  ${data.avatar ? `<img src="${esc(data.avatar)}" alt="${esc(data.name)}" class="centered-avatar" loading="eager" />` : ""}
-  <h1 class="centered-name">${esc(data.name)}</h1>
-  ${data.title ? `<div class="centered-title">${esc(data.title)}</div>` : ""}
-  ${data.location ? `<div class="centered-location">${esc(data.location)}</div>` : ""}
-  ${data.bio ? `<p class="centered-bio">${esc(data.bio)}</p>` : ""}
-  <div class="social-links centered-links">${socialLinks(data)}</div>
-
-  ${gallery}
-
-  ${data.about ? `<section class="centered-section"><h2 class="section-title">About</h2><p class="centered-about">${esc(data.about)}</p></section>` : ""}
-
-  ${data.skills?.length ? `<section class="centered-section"><h2 class="section-title">Skills</h2><div>${skillBadges(data.skills)}</div></section>` : ""}
-
-  ${data.experience?.length ? `<section class="centered-section"><h2 class="section-title">Experience</h2>${expItems(data)}</section>` : ""}
-
-  ${data.education?.length ? `<section class="centered-section"><h2 class="section-title">Education</h2>${eduItems(data)}</section>` : ""}
-
-  ${data.projects?.filter((p) => p.include !== false).length ? `<section class="centered-section"><h2 class="section-title">Projects</h2><div class="project-grid">${projectCards(data)}</div></section>` : ""}
-</main>
-${themeSwitcherHtml}
-</body>
-</html>`;
-
-  const css = baseCss + `
-/* ── Centered: dark (default) ── */
-html.dark body.centered-body, body.centered-body { background:#0d0d0d; color:#e8e6e1; }
-/* ── Centered: light ── */
-html.light body.centered-body { background:#faf9f7; color:#1a1a1a; }
-html.light .centered-body .section-title { color: #888; }
-html.light .centered-body .project-card { border-color: #e0ddd8; }
-html.light .centered-body .exp-item, html.light .centered-body .edu-item { border-color: #e0ddd8; }
-html.light .centered-body .social-links a { color: #444; }
-.centered-main{max-width:640px;margin:0 auto;padding:4rem 1.5rem 6rem}
-.centered-avatar{width:72px;height:72px;border-radius:50%;object-fit:cover;margin:0 auto 1.5rem}
-.centered-name{font-family:'EB Garamond',Georgia,serif;font-size:clamp(2rem,5vw,3rem);font-weight:400;text-align:center;letter-spacing:-.02em;margin-bottom:.35rem}
-.centered-title{text-align:center;font-size:.85rem;opacity:.55;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.2rem}
-.centered-location{text-align:center;font-size:.8rem;opacity:.4;margin-bottom:.75rem}
-.centered-bio{text-align:center;font-size:1rem;opacity:.7;max-width:48ch;margin:0 auto 1.5rem;line-height:1.65}
-.centered-links{justify-content:center;margin-bottom:2.5rem}
-.centered-section{margin-bottom:2.5rem}
-.centered-about{font-size:.95rem;opacity:.75;line-height:1.8;max-width:64ch}
-.project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem}
-`;
-
-  return { html, css };
+.badge{
+  display:inline-block;padding:.2em .75em;border-radius:9999px;
+  font-size:.68rem;letter-spacing:.04em;margin:.15rem;
+  border:1px solid var(--badge-border);color:var(--badge-color);background:var(--badge-bg);
 }
-
-// ── Split (Studio) template ──────────────────────────────────────────────────
-function buildSplit(data: PortfolioData): { html: string; css: string } {
-  const gallery = data.galleryImages?.length ? gallerySection(data.galleryImages) : "";
-  const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>${esc(data.name)} — Portfolio</title>
-<meta name="description" content="${esc(data.bio || data.about || data.name + "'s portfolio")}" />
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
-</head>
-<body class="split-body">
-<div class="split-layout">
-  <aside class="split-sidebar">
-    ${data.avatar ? `<img src="${esc(data.avatar)}" alt="${esc(data.name)}" class="split-avatar" loading="eager" />` : ""}
-    <h1 class="split-name">${esc(data.name)}</h1>
-    ${data.title ? `<div class="split-title">${esc(data.title)}</div>` : ""}
-    ${data.location ? `<div class="split-location">${esc(data.location)}</div>` : ""}
-    ${data.bio ? `<p class="split-bio">${esc(data.bio)}</p>` : ""}
-    <nav class="social-links split-links">${socialLinks(data)}</nav>
-    ${data.skills?.length ? `<div class="split-skills-section"><div class="section-title">Skills</div>${skillBadges(data.skills)}</div>` : ""}
-  </aside>
-  <main class="split-content">
-    ${gallery}
-    ${data.about ? `<section class="split-section"><h2 class="section-title">About</h2><p class="split-about">${esc(data.about)}</p></section>` : ""}
-    ${data.experience?.length ? `<section class="split-section"><h2 class="section-title">Experience</h2>${expItems(data)}</section>` : ""}
-    ${data.education?.length ? `<section class="split-section"><h2 class="section-title">Education</h2>${eduItems(data)}</section>` : ""}
-    ${data.projects?.filter((p) => p.include !== false).length ? `<section class="split-section"><h2 class="section-title">Projects</h2><div class="project-grid">${projectCards(data)}</div></section>` : ""}
-  </main>
-</div>
-${themeSwitcherHtml}
-</body>
-</html>`;
-
-  const css = baseCss + `
-/* ── Split: dark (default) ── */
-html.dark body.split-body, body.split-body { background:#0c0c0c; color:#dbd9d4; min-height:100vh; }
-/* ── Split: light ── */
-html.light body.split-body { background:#f7f6f4; color:#1c1b18; }
-html.light .split-sidebar { background:#eeece8; border-right-color:rgba(0,0,0,0.08); }
-html.light .split-body .section-title { color:#999; }
-html.light .split-body .project-card { border-color:#dddad5; background:#fff; }
-html.light .split-body .exp-item, html.light .split-body .edu-item { border-color:#dddad5; }
-html.light .split-body .social-links a { color:#555; }
-.split-layout{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
-@media(max-width:768px){.split-layout{grid-template-columns:1fr}}
-.split-sidebar{position:sticky;top:0;height:100vh;overflow-y:auto;padding:2.5rem 1.75rem;border-right:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;gap:.5rem;transition:background 0.3s;}
-.split-avatar{width:64px;height:64px;border-radius:.5rem;object-fit:cover;margin-bottom:.75rem}
-.split-name{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:700;letter-spacing:-.02em;line-height:1.2;margin-bottom:.2rem}
-.split-title{font-size:.75rem;text-transform:uppercase;letter-spacing:.12em;opacity:.45;margin-bottom:.15rem}
-.split-location{font-size:.78rem;opacity:.35;margin-bottom:.75rem}
-.split-bio{font-size:.85rem;opacity:.65;line-height:1.65;margin-bottom:1rem}
-.split-links{flex-direction:column;gap:.35rem;margin-bottom:1.25rem}
-.split-skills-section{margin-top:auto;padding-top:1.5rem}
-.split-content{padding:3rem 2.5rem;max-width:800px}
-@media(max-width:768px){.split-content{padding:2rem 1.5rem}}
-.split-section{margin-bottom:3rem}
-.split-about{font-size:.95rem;opacity:.75;line-height:1.8;max-width:60ch}
-.project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem}
+.pcard{
+  border-radius:1rem;overflow:hidden;
+  background:var(--card-bg);border:1px solid var(--card-border);
+  transition:transform .2s,box-shadow .2s;
+}
+.pcard:hover{transform:translateY(-3px);box-shadow:0 12px 32px var(--card-shadow);}
+.pcard-img{width:100%;height:155px;object-fit:cover;}
+.pcard-body{padding:1rem 1rem .9rem}
+.pcard-name{font-weight:600;font-size:.9rem;margin-bottom:.3rem;color:var(--text-primary)}
+.pcard-desc{font-size:.8rem;color:var(--text-muted);margin-bottom:.4rem;line-height:1.5}
+.pcard-lang{font-size:.7rem;color:var(--text-faint);font-family:monospace;margin-bottom:.4rem}
+.pcard-links{display:flex;gap:.75rem;font-size:.78rem;color:var(--accent)}
+.exp,.edu{padding:.85rem 0;border-bottom:1px solid var(--line)}
+.exp:last-child,.edu:last-child{border:none}
+.exp-top,.edu-top{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;margin-bottom:.15rem}
+.exp-role,.edu-deg{font-weight:600;font-size:.88rem;color:var(--text-primary)}
+.exp-period,.edu-period{font-size:.72rem;color:var(--text-faint);white-space:nowrap}
+.exp-co,.edu-school{font-size:.82rem;color:var(--text-muted)}
+.exp-desc{font-size:.78rem;color:var(--text-faint);margin-top:.25rem;line-height:1.55}
+.sec-label{font-size:.62rem;text-transform:uppercase;letter-spacing:.22em;color:var(--label);margin-bottom:1.1rem;}
+/* gallery */
+.gl{position:relative;border-radius:.85rem;overflow:hidden;aspect-ratio:16/9;max-height:480px;background:#000;margin-block:2rem;}
+.gl-track{position:relative;width:100%;height:100%;}
+.gl-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .4s;pointer-events:none;}
+.gl-img.active{opacity:1;pointer-events:auto;}
+.gl-arrow{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.5);color:#fff;border:none;width:2.25rem;height:2.25rem;border-radius:50%;font-size:1.3rem;cursor:pointer;z-index:2;display:flex;align-items:center;justify-content:center;transition:background .2s;}
+.gl-arrow:hover{background:rgba(0,0,0,.8);}
+.gl-prev{left:.6rem;}.gl-next{right:.6rem;}
+.gl-dots{position:absolute;bottom:.65rem;left:50%;transform:translateX(-50%);display:flex;gap:.35rem;z-index:2;}
+.gl-dot{width:.45rem;height:.45rem;border-radius:50%;background:rgba(255,255,255,.4);border:none;cursor:pointer;padding:0;transition:all .2s;}
+.gl-dot.active{width:1.1rem;background:#fff;border-radius:.45rem;}
 `;
 
-  return { html, css };
-}
-
-// ── Editorial template ────────────────────────────────────────────────────────
-function buildEditorial(data: PortfolioData): { html: string; css: string } {
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 1. NOVA  — bold bento-grid dark-first design
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function buildNova(data: PortfolioData): { html: string; css: string } {
+  const acc = data.accentColor || "#6366f1";
   const gallery = data.galleryImages?.length ? gallerySection(data.galleryImages) : "";
   const html = `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>${esc(data.name)} — Portfolio</title>
 <meta name="description" content="${esc(data.bio || data.about || data.name + "'s portfolio")}" />
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body class="ed-body">
-<header class="ed-header">
-  <div class="ed-header-inner">
-    <div class="ed-header-text">
-      <h1 class="ed-name">${esc(data.name)}</h1>
-      ${data.title ? `<div class="ed-title">${esc(data.title)}</div>` : ""}
-      ${data.bio ? `<p class="ed-bio">${esc(data.bio)}</p>` : ""}
-      <nav class="social-links ed-links">${socialLinks(data)}</nav>
-    </div>
-    ${data.avatar ? `<img src="${esc(data.avatar)}" alt="${esc(data.name)}" class="ed-avatar" loading="eager" />` : ""}
-  </div>
-</header>
-<main class="ed-main">
-  ${gallery}
-  <div class="ed-grid">
-    ${data.about ? `<section class="ed-section ed-span2"><h2 class="section-title">About</h2><p class="ed-about">${esc(data.about)}</p></section>` : ""}
-    ${data.skills?.length ? `<section class="ed-section"><h2 class="section-title">Skills</h2><div>${skillBadges(data.skills)}</div></section>` : ""}
-    ${data.experience?.length ? `<section class="ed-section ed-span2"><h2 class="section-title">Experience</h2>${expItems(data)}</section>` : ""}
-    ${data.education?.length ? `<section class="ed-section"><h2 class="section-title">Education</h2>${eduItems(data)}</section>` : ""}
-  </div>
-  ${data.projects?.filter((p) => p.include !== false).length ? `<section class="ed-projects"><h2 class="section-title">Projects</h2><div class="project-grid">${projectCards(data)}</div></section>` : ""}
-</main>
-${themeSwitcherHtml}
-</body>
-</html>`;
+<body class="nova-body">
+<div class="nova-wrap">
 
-  const css = baseCss + `
-/* ── Editorial: light (default — editorial is light-first) ── */
-html.light body.ed-body, body.ed-body { background:#f9f7f3; color:#1a1814; min-height:100vh; }
-html.light .ed-header { background:#1a1814; color:#f0ede8; }
-html.light .ed-body .section-title { color:#aaa; }
-html.light .ed-body .project-card { border-color:#e5e1d8; background:#fff; }
-html.light .ed-body .exp-item, html.light .ed-body .edu-item { border-color:#e5e1d8; }
-
-/* ── Editorial: dark ── */
-html.dark body.ed-body { background:#111008; color:#e8e4dc; }
-html.dark .ed-header { background:#0a0900; color:#e8e4dc; border-bottom: 1px solid rgba(255,255,255,0.07); }
-html.dark .ed-main { background:#111008; }
-html.dark .ed-body .section-title { color:#888; }
-html.dark .ed-body .project-card { border-color:rgba(255,255,255,0.1); background:rgba(255,255,255,0.03); }
-html.dark .ed-body .project-title { color:#e8e4dc; }
-html.dark .ed-body .project-desc { color:#aaa; }
-html.dark .ed-body .project-links a { color:#c9c5bc; }
-html.dark .ed-body .exp-item, html.dark .ed-body .edu-item { border-color:rgba(255,255,255,0.08); }
-html.dark .ed-body .social-links a { color:#c9c5bc; }
-.ed-header{padding:4rem 0 3rem;transition:background 0.3s,color 0.3s;}
-.ed-header-inner{max-width:1100px;margin:0 auto;padding:0 2rem;display:flex;align-items:flex-start;gap:2.5rem;justify-content:space-between}
-.ed-header-text{flex:1}
-.ed-name{font-family:'Playfair Display',Georgia,serif;font-size:clamp(2.5rem,6vw,5rem);font-weight:700;letter-spacing:-.03em;line-height:1.05;margin-bottom:.4rem}
-.ed-title{font-size:.8rem;text-transform:uppercase;letter-spacing:.2em;opacity:.5;margin-bottom:1rem}
-.ed-bio{font-size:1.05rem;opacity:.7;max-width:52ch;line-height:1.7;margin-bottom:1.25rem}
-.ed-links{opacity:.7}
-.ed-avatar{width:140px;height:140px;border-radius:.5rem;object-fit:cover;flex-shrink:0}
-.ed-main{max-width:1100px;margin:0 auto;padding:3rem 2rem 5rem;transition:background 0.3s,color 0.3s;}
-.ed-grid{display:grid;grid-template-columns:1fr 1fr;gap:2.5rem 3rem;margin-bottom:3rem}
-@media(max-width:768px){.ed-grid{grid-template-columns:1fr}}
-.ed-section{}
-.ed-span2{grid-column:span 2}
-@media(max-width:768px){.ed-span2{grid-column:span 1}}
-.ed-about{font-size:1rem;line-height:1.8;opacity:.8;max-width:64ch}
-.ed-projects{margin-top:1rem}
-.project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.25rem;margin-top:1rem}
-`;
-
-  return { html, css };
-}
-
-// ── Aurora template (dark gradient + glassmorphism) ───────────────────────────
-function buildAurora(data: PortfolioData): { html: string; css: string } {
-  const gallery = data.galleryImages?.length ? gallerySection(data.galleryImages) : "";
-  const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>${esc(data.name)} — Portfolio</title>
-<meta name="description" content="${esc(data.bio || data.about || data.name + "'s portfolio")}" />
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:ital@0;1&display=swap" rel="stylesheet">
-</head>
-<body class="aurora-body">
-  <div class="aurora-bg">
-    <div class="aurora-orb aurora-orb1"></div>
-    <div class="aurora-orb aurora-orb2"></div>
-    <div class="aurora-orb aurora-orb3"></div>
-  </div>
-  <div class="aurora-wrap">
-    <header class="aurora-hero">
-      ${data.avatar ? `<div class="aurora-avatar-ring"><img src="${esc(data.avatar)}" alt="${esc(data.name)}" class="aurora-avatar" loading="eager" /></div>` : ""}
-      <div class="aurora-hero-text">
-        <h1 class="aurora-name">${esc(data.name)}</h1>
-        ${data.title ? `<div class="aurora-role">${esc(data.title)}</div>` : ""}
-        ${data.location ? `<div class="aurora-location">📍 ${esc(data.location)}</div>` : ""}
-        ${data.bio ? `<p class="aurora-bio">${esc(data.bio)}</p>` : ""}
-        <div class="social-links aurora-links">${socialLinks(data)}</div>
+  <!-- Hero bento cell -->
+  <div class="nova-bento">
+    <div class="nova-cell nova-hero">
+      ${data.avatar ? `<img src="${esc(data.avatar)}" class="nova-av" alt="${esc(data.name)}" />` : ""}
+      <div class="nova-hero-text">
+        <h1 class="nova-name">${esc(data.name)}</h1>
+        ${data.title ? `<div class="nova-role">${esc(data.title)}</div>` : ""}
+        ${data.location ? `<div class="nova-loc">📍 ${esc(data.location)}</div>` : ""}
       </div>
+    </div>
+
+    ${data.bio ? `<div class="nova-cell nova-bio-cell"><p class="nova-bio">${esc(data.bio)}</p></div>` : ""}
+
+    ${data.skills?.length ? `
+    <div class="nova-cell nova-skills-cell">
+      <div class="sec-label">Skills</div>
+      <div class="nova-skills">${skillBadges(data.skills)}</div>
+    </div>` : ""}
+
+    <div class="nova-cell nova-links-cell">
+      <div class="sec-label">Connect</div>
+      <div class="nova-links">${socialLinks(data)}</div>
+    </div>
+  </div>
+
+  ${gallery}
+
+  ${data.about ? `
+  <section class="nova-section">
+    <div class="sec-label">About</div>
+    <p class="nova-about">${esc(data.about)}</p>
+  </section>` : ""}
+
+  ${data.experience?.length ? `
+  <section class="nova-section">
+    <div class="sec-label">Experience</div>
+    ${expItems(data)}
+  </section>` : ""}
+
+  ${data.education?.length ? `
+  <section class="nova-section">
+    <div class="sec-label">Education</div>
+    ${eduItems(data)}
+  </section>` : ""}
+
+  ${data.projects?.filter(p=>p.include!==false).length ? `
+  <section class="nova-section">
+    <div class="sec-label">Projects</div>
+    <div class="nova-grid">${projectCards(data)}</div>
+  </section>` : ""}
+
+</div>
+${themeToggle}
+</body></html>`;
+
+  const css = sharedCss + `
+:root{--acc:${acc};}
+.nova-body{
+  font-family:'Outfit',sans-serif;
+  background:var(--bg);color:var(--text-primary);
+  transition:background .3s,color .3s;
+}
+[data-theme="dark"]{
+  --bg:#0a0a0f;--bg2:#111118;--text-primary:#eeeef2;--text-muted:#9999aa;
+  --text-faint:#666680;--accent:${acc};--label:#666680;
+  --card-bg:#111118;--card-border:rgba(255,255,255,.07);--card-shadow:rgba(0,0,0,.4);
+  --badge-bg:rgba(255,255,255,.05);--badge-border:rgba(255,255,255,.12);--badge-color:#ccccd8;
+  --line:rgba(255,255,255,.07);
+}
+[data-theme="light"]{
+  --bg:#f5f5fa;--bg2:#fff;--text-primary:#0f0f1a;--text-muted:#55556a;
+  --text-faint:#9999aa;--accent:${acc};--label:#9999aa;
+  --card-bg:#fff;--card-border:rgba(0,0,0,.08);--card-shadow:rgba(0,0,0,.08);
+  --badge-bg:rgba(0,0,0,.04);--badge-border:rgba(0,0,0,.1);--badge-color:#33334a;
+  --line:rgba(0,0,0,.08);
+}
+.nova-wrap{max-width:860px;margin:0 auto;padding:2.5rem 1.25rem 5rem;}
+.nova-bento{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.75rem;}
+@media(max-width:600px){.nova-bento{grid-template-columns:1fr;}}
+.nova-cell{
+  background:var(--card-bg);border:1px solid var(--card-border);
+  border-radius:1.25rem;padding:1.5rem;
+}
+.nova-hero{
+  grid-column:span 2;display:flex;align-items:center;gap:1.5rem;
+  background:linear-gradient(135deg,var(--bg2) 60%, color-mix(in srgb,${acc} 12%,var(--bg2)));
+}
+@media(max-width:600px){.nova-hero{grid-column:span 1;}}
+.nova-av{width:72px;height:72px;border-radius:1rem;object-fit:cover;flex-shrink:0;
+  outline:3px solid ${acc};outline-offset:3px;}
+.nova-name{font-size:clamp(1.6rem,4vw,2.4rem);font-weight:800;letter-spacing:-.04em;line-height:1.1;margin-bottom:.2rem;}
+.nova-role{font-size:.82rem;color:${acc};font-weight:500;letter-spacing:.04em;margin-bottom:.2rem;}
+.nova-loc{font-size:.75rem;color:var(--text-faint);}
+.nova-bio-cell{grid-column:span 2;}
+@media(max-width:600px){.nova-bio-cell{grid-column:span 1;}}
+.nova-bio{font-size:.95rem;color:var(--text-muted);line-height:1.75;}
+.nova-skills-cell{}
+.nova-skills{display:flex;flex-wrap:wrap;gap:.2rem;}
+.nova-links-cell{}
+.nova-links{display:flex;flex-direction:column;gap:.5rem;}
+.nova-links a{font-size:.83rem;color:${acc};display:inline-flex;align-items:center;gap:.3rem;}
+.nova-links a::before{content:'→';font-size:.7rem;}
+.nova-section{
+  background:var(--card-bg);border:1px solid var(--card-border);
+  border-radius:1.25rem;padding:1.5rem 1.5rem 1.25rem;
+  margin-bottom:1rem;
+}
+.nova-about{font-size:.93rem;color:var(--text-muted);line-height:1.8;max-width:66ch;}
+.nova-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:.85rem;margin-top:.5rem;}
+`;
+  return { html, css };
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 2. PRISM  — animated gradient mesh + glassmorphism
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function buildPrism(data: PortfolioData): { html: string; css: string } {
+  const acc = data.accentColor || "#a855f7";
+  const gallery = data.galleryImages?.length ? gallerySection(data.galleryImages) : "";
+  const html = `<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>${esc(data.name)} — Portfolio</title>
+<meta name="description" content="${esc(data.bio || data.about || data.name + "'s portfolio")}" />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="prism-body">
+  <div class="prism-mesh" aria-hidden="true">
+    <div class="mesh-orb o1"></div><div class="mesh-orb o2"></div><div class="mesh-orb o3"></div>
+  </div>
+  <div class="prism-wrap">
+    <header class="prism-hero">
+      <div class="prism-glass prism-intro">
+        ${data.avatar ? `<img src="${esc(data.avatar)}" class="prism-av" alt="${esc(data.name)}" />` : ""}
+        <div>
+          <h1 class="prism-name">${esc(data.name)}</h1>
+          ${data.title ? `<div class="prism-role">${esc(data.title)}</div>` : ""}
+          ${data.location ? `<div class="prism-loc">${esc(data.location)}</div>` : ""}
+          ${data.bio ? `<p class="prism-bio">${esc(data.bio)}</p>` : ""}
+          <div class="prism-links">${socialLinks(data)}</div>
+        </div>
+      </div>
+      ${data.skills?.length ? `
+      <div class="prism-glass prism-skills">
+        <div class="sec-label">Skills</div>
+        ${skillBadges(data.skills)}
+      </div>` : ""}
     </header>
 
     ${gallery}
 
     ${data.about ? `
-    <section class="aurora-card">
-      <h2 class="aurora-section-title">About</h2>
-      <p class="aurora-about">${esc(data.about)}</p>
-    </section>` : ""}
-
-    ${data.skills?.length ? `
-    <section class="aurora-card">
-      <h2 class="aurora-section-title">Skills</h2>
-      <div class="aurora-skills">${skillBadges(data.skills)}</div>
-    </section>` : ""}
+    <div class="prism-glass prism-sec">
+      <div class="sec-label">About</div>
+      <p class="prism-about">${esc(data.about)}</p>
+    </div>` : ""}
 
     ${data.experience?.length ? `
-    <section class="aurora-card">
-      <h2 class="aurora-section-title">Experience</h2>
+    <div class="prism-glass prism-sec">
+      <div class="sec-label">Experience</div>
       ${expItems(data)}
-    </section>` : ""}
+    </div>` : ""}
 
     ${data.education?.length ? `
-    <section class="aurora-card">
-      <h2 class="aurora-section-title">Education</h2>
+    <div class="prism-glass prism-sec">
+      <div class="sec-label">Education</div>
       ${eduItems(data)}
-    </section>` : ""}
+    </div>` : ""}
 
-    ${data.projects?.filter((p) => p.include !== false).length ? `
-    <section class="aurora-card">
-      <h2 class="aurora-section-title">Projects</h2>
-      <div class="aurora-project-grid">${projectCards(data)}</div>
-    </section>` : ""}
+    ${data.projects?.filter(p=>p.include!==false).length ? `
+    <div class="prism-glass prism-sec">
+      <div class="sec-label">Projects</div>
+      <div class="prism-pgrid">${projectCards(data)}</div>
+    </div>` : ""}
+
   </div>
-${themeSwitcherHtml}
-</body>
-</html>`;
+${themeToggle}
+</body></html>`;
 
-  const css = baseCss + `
-/* ── Aurora: dark (default) ── */
-html.dark body.aurora-body, body.aurora-body {
-  background: #04050d;
-  color: #e2e8f0;
-  min-height: 100vh;
-  font-family: 'Space Grotesk', sans-serif;
-  overflow-x: hidden;
-  transition: background 0.4s, color 0.3s;
+  const css = sharedCss + `
+:root{--acc:${acc};}
+[data-theme="dark"]{
+  --bg:#07070f;--text-primary:#e8e4f8;--text-muted:#9990c0;--text-faint:#5f5888;
+  --accent:${acc};--label:#5f5888;
+  --glass-bg:rgba(255,255,255,.04);--glass-border:rgba(255,255,255,.08);
+  --card-bg:rgba(255,255,255,.04);--card-border:rgba(255,255,255,.08);--card-shadow:rgba(0,0,0,.5);
+  --badge-bg:rgba(168,85,247,.1);--badge-border:rgba(168,85,247,.25);--badge-color:#d8b4fe;
+  --line:rgba(255,255,255,.07);
 }
-
-/* ── Aurora: light ── */
-html.light body.aurora-body {
-  background: #f0eeff;
-  color: #1a1030;
+[data-theme="light"]{
+  --bg:#faf8ff;--text-primary:#1a0a30;--text-muted:#5a4a7a;--text-faint:#9988bb;
+  --accent:${acc};--label:#9988bb;
+  --glass-bg:rgba(255,255,255,.7);--glass-border:rgba(168,85,247,.18);
+  --card-bg:rgba(255,255,255,.75);--card-border:rgba(168,85,247,.15);--card-shadow:rgba(100,50,180,.08);
+  --badge-bg:rgba(168,85,247,.08);--badge-border:rgba(168,85,247,.2);--badge-color:#6d28d9;
+  --line:rgba(168,85,247,.12);
 }
-html.light .aurora-bg .aurora-orb { opacity: 0.10; }
-html.light .aurora-orb1 { background: #7c3aed; }
-html.light .aurora-orb2 { background: #0ea5e9; }
-html.light .aurora-orb3 { background: #10b981; }
-html.light .aurora-card {
-  background: rgba(255,255,255,0.7);
-  border-color: rgba(124,58,237,0.15);
-  backdrop-filter: blur(12px);
-}
-html.light .aurora-body .aurora-name {
-  background: linear-gradient(135deg, #5b21b6, #0284c7, #059669);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-html.light .aurora-body .aurora-role { color: #5b21b6; }
-html.light .aurora-body .aurora-section-title { color: #5b21b6; }
-html.light .aurora-body .aurora-links a { color: #5b21b6; }
-html.light .aurora-body .aurora-card .skill-badge { border-color: rgba(91,33,182,0.35); color: #5b21b6; opacity: 1; }
-html.light .aurora-body .project-card { background: rgba(255,255,255,0.8); border-color: rgba(124,58,237,0.15); }
-html.light .aurora-body .project-title { color: #1a1030; }
-html.light .aurora-body .project-desc { color: #4a3d6e; }
-html.light .aurora-body .exp-item, html.light .aurora-body .edu-item { border-color: rgba(124,58,237,0.15); }
-
-.aurora-bg {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-.aurora-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(100px);
-  opacity: 0.18;
-  animation: aurora-drift 14s ease-in-out infinite alternate;
-}
-.aurora-orb1 { width: 600px; height: 600px; background: #7c3aed; top: -150px; left: -150px; animation-delay: 0s; }
-.aurora-orb2 { width: 500px; height: 500px; background: #0ea5e9; top: 30%; right: -100px; animation-delay: -5s; }
-.aurora-orb3 { width: 400px; height: 400px; background: #10b981; bottom: 0; left: 30%; animation-delay: -9s; }
-@keyframes aurora-drift {
-  0%   { transform: translate(0,0) scale(1); }
-  50%  { transform: translate(40px, 30px) scale(1.08); }
-  100% { transform: translate(-20px, 20px) scale(0.95); }
-}
-.aurora-wrap {
-  position: relative;
-  z-index: 1;
-  max-width: 780px;
-  margin: 0 auto;
-  padding: 3.5rem 1.5rem 5rem;
-}
-.aurora-hero {
-  display: flex;
-  align-items: center;
-  gap: 2rem;
-  margin-bottom: 3rem;
-  flex-wrap: wrap;
-}
-.aurora-avatar-ring {
-  flex-shrink: 0;
-  padding: 3px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #7c3aed, #0ea5e9, #10b981);
-}
-.aurora-avatar {
-  width: 88px;
-  height: 88px;
-  border-radius: 50%;
-  object-fit: cover;
-  display: block;
-  border: 3px solid #04050d;
-}
-html.light .aurora-avatar { border-color: #f0eeff; }
-.aurora-hero-text { flex: 1; min-width: 200px; }
-.aurora-name {
-  font-size: clamp(1.8rem, 5vw, 2.8rem);
-  font-weight: 700;
-  letter-spacing: -.03em;
-  background: linear-gradient(135deg, #a78bfa, #38bdf8, #34d399);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin-bottom: .25rem;
-}
-.aurora-role {
-  font-family: 'Space Mono', monospace;
-  font-size: .78rem;
-  color: #a78bfa;
-  letter-spacing: .08em;
-  margin-bottom: .2rem;
-}
-.aurora-location { font-size: .8rem; opacity: .45; margin-bottom: .75rem; }
-.aurora-bio { font-size: .95rem; opacity: .72; line-height: 1.7; margin-bottom: 1rem; max-width: 50ch; }
-.aurora-links { gap: .5rem 1rem; }
-.aurora-links a {
-  color: #a78bfa;
-  opacity: 1;
-  font-size: .82rem;
-  border-bottom: 1px solid transparent;
-  transition: border-color .2s;
-}
-.aurora-links a:hover { border-color: #a78bfa; text-decoration: none; }
-.aurora-card {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-radius: 1rem;
-  padding: 1.75rem 1.5rem;
-  margin-bottom: 1.5rem;
-  transition: background 0.3s, border-color 0.3s;
-}
-.aurora-section-title {
-  font-size: .65rem;
-  text-transform: uppercase;
-  letter-spacing: .22em;
-  color: #a78bfa;
-  opacity: 1;
-  margin-bottom: 1.25rem;
-}
-.aurora-about { font-size: .95rem; opacity: .78; line-height: 1.8; }
-.aurora-skills { display: flex; flex-wrap: wrap; gap: .3rem; }
-.aurora-card .skill-badge { border-color: rgba(167,139,250,.4); color: #c4b5fd; opacity: 1; }
-.aurora-project-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(260px,1fr)); gap: 1rem; }
-.aurora-card .project-card {
-  background: rgba(255,255,255,0.04);
-  border-color: rgba(255,255,255,0.1);
-}
-.aurora-card .project-title { color: #e2e8f0; }
+.prism-body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text-primary);min-height:100vh;overflow-x:hidden;transition:background .3s,color .3s;}
+.prism-mesh{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+.mesh-orb{position:absolute;border-radius:50%;filter:blur(90px);animation:mesh-float 16s ease-in-out infinite alternate;}
+.o1{width:550px;height:550px;background:${acc};opacity:.15;top:-180px;left:-120px;animation-delay:0s;}
+.o2{width:450px;height:450px;background:#06b6d4;opacity:.12;bottom:0;right:-100px;animation-delay:-6s;}
+.o3{width:350px;height:350px;background:#f43f5e;opacity:.1;top:40%;left:35%;animation-delay:-11s;}
+[data-theme="light"] .o1{opacity:.09;}[data-theme="light"] .o2{opacity:.07;}[data-theme="light"] .o3{opacity:.07;}
+@keyframes mesh-float{0%{transform:translate(0,0) scale(1);}50%{transform:translate(35px,25px) scale(1.06);}100%{transform:translate(-15px,15px) scale(.96);}}
+.prism-wrap{position:relative;z-index:1;max-width:800px;margin:0 auto;padding:3rem 1.25rem 5rem;}
+.prism-glass{background:var(--glass-bg);border:1px solid var(--glass-border);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:1.25rem;padding:1.75rem;}
+.prism-hero{display:grid;grid-template-columns:1fr auto;gap:1rem;align-items:start;margin-bottom:1.25rem;}
+@media(max-width:620px){.prism-hero{grid-template-columns:1fr;}}
+.prism-intro{display:flex;gap:1.5rem;align-items:flex-start;}
+.prism-av{width:78px;height:78px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid ${acc};}
+.prism-name{font-size:clamp(1.7rem,4vw,2.5rem);font-weight:700;letter-spacing:-.03em;line-height:1.1;margin-bottom:.2rem;}
+.prism-role{font-size:.78rem;color:${acc};letter-spacing:.07em;text-transform:uppercase;margin-bottom:.15rem;}
+.prism-loc{font-size:.75rem;color:var(--text-faint);margin-bottom:.65rem;}
+.prism-bio{font-size:.88rem;color:var(--text-muted);line-height:1.7;margin-bottom:.85rem;max-width:48ch;}
+.prism-links{display:flex;flex-wrap:wrap;gap:.4rem .9rem;}
+.prism-links a{font-size:.78rem;color:${acc};border-bottom:1px solid transparent;transition:border-color .2s;}
+.prism-links a:hover{border-color:${acc};text-decoration:none;}
+.prism-skills{min-width:170px;max-width:220px;}
+@media(max-width:620px){.prism-skills{max-width:100%;}}
+.prism-sec{margin-top:1.25rem;}
+.prism-about{font-size:.92rem;color:var(--text-muted);line-height:1.8;max-width:64ch;}
+.prism-pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:.85rem;margin-top:.6rem;}
 `;
-
   return { html, css };
 }
 
-// ── Minimal template (clean light typographic) ───────────────────────────────
-function buildMinimal(data: PortfolioData): { html: string; css: string } {
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 3. FOLIO  — magazine editorial with oversized type + full-width header
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function buildFolio(data: PortfolioData): { html: string; css: string } {
+  const acc = data.accentColor || "#e85d04";
   const gallery = data.galleryImages?.length ? gallerySection(data.galleryImages) : "";
   const html = `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>${esc(data.name)} — Portfolio</title>
 <meta name="description" content="${esc(data.bio || data.about || data.name + "'s portfolio")}" />
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 </head>
-<body class="min-body">
-  <div class="min-container">
-    <header class="min-header">
-      <div class="min-header-left">
-        <h1 class="min-name">${esc(data.name)}</h1>
-        ${data.title ? `<span class="min-role">${esc(data.title)}</span>` : ""}
-      </div>
-      <div class="min-header-right">
-        ${data.avatar ? `<img src="${esc(data.avatar)}" alt="${esc(data.name)}" class="min-avatar" loading="eager" />` : ""}
-      </div>
-    </header>
+<body class="folio-body">
 
-    <div class="min-meta">
-      ${data.location ? `<span class="min-meta-item">${esc(data.location)}</span>` : ""}
-      ${data.bio ? `<span class="min-meta-item min-bio">${esc(data.bio)}</span>` : ""}
-    </div>
-    <div class="social-links min-links">${socialLinks(data)}</div>
-
-    <hr class="min-divider" />
-
-    ${gallery}
-
-    <div class="min-body-grid">
-      <div class="min-main">
-        ${data.about ? `
-        <section class="min-section">
-          <h2 class="min-section-title">About</h2>
-          <p class="min-about">${esc(data.about)}</p>
-        </section>` : ""}
-
-        ${data.experience?.length ? `
-        <section class="min-section">
-          <h2 class="min-section-title">Experience</h2>
-          ${expItems(data)}
-        </section>` : ""}
-
-        ${data.projects?.filter((p) => p.include !== false).length ? `
-        <section class="min-section">
-          <h2 class="min-section-title">Projects</h2>
-          <div class="min-project-grid">${projectCards(data)}</div>
-        </section>` : ""}
-      </div>
-
-      <aside class="min-aside">
-        ${data.skills?.length ? `
-        <section class="min-section">
-          <h2 class="min-section-title">Skills</h2>
-          <div class="min-skills">${skillBadges(data.skills)}</div>
-        </section>` : ""}
-
-        ${data.education?.length ? `
-        <section class="min-section">
-          <h2 class="min-section-title">Education</h2>
-          ${eduItems(data)}
-        </section>` : ""}
-      </aside>
+<header class="folio-header">
+  <div class="folio-header-inner">
+    <div class="folio-eyebrow">${data.title ? esc(data.title) : "Portfolio"}</div>
+    <h1 class="folio-name">${esc(data.name)}</h1>
+    <div class="folio-header-foot">
+      <div class="folio-hlinks">${socialLinks(data)}</div>
+      ${data.location ? `<span class="folio-loc">${esc(data.location)}</span>` : ""}
     </div>
   </div>
-${themeSwitcherHtml}
-</body>
-</html>`;
+  ${data.avatar ? `<img src="${esc(data.avatar)}" class="folio-av" alt="${esc(data.name)}" />` : ""}
+</header>
 
-  const css = baseCss + `
-/* ── Minimal: light (default — minimal is light-first) ── */
-html.light body.min-body, body.min-body {
-  background: #ffffff;
-  color: #111111;
-  font-family: 'DM Sans', sans-serif;
-  min-height: 100vh;
-  transition: background 0.3s, color 0.3s;
-}
+<div class="folio-wrap">
+  ${data.bio ? `<p class="folio-lead">${esc(data.bio)}</p>` : ""}
 
-/* ── Minimal: dark ── */
-html.dark body.min-body {
-  background: #0f0f0f;
-  color: #e8e6e0;
+  ${gallery}
+
+  <div class="folio-cols">
+    <div class="folio-main">
+      ${data.about ? `<section class="folio-sec"><h2 class="sec-label">About</h2><p class="folio-body-text">${esc(data.about)}</p></section>` : ""}
+      ${data.experience?.length ? `<section class="folio-sec"><h2 class="sec-label">Experience</h2>${expItems(data)}</section>` : ""}
+      ${data.projects?.filter(p=>p.include!==false).length ? `<section class="folio-sec"><h2 class="sec-label">Projects</h2><div class="folio-pgrid">${projectCards(data)}</div></section>` : ""}
+    </div>
+    <aside class="folio-aside">
+      ${data.skills?.length ? `<section class="folio-sec"><h2 class="sec-label">Skills</h2><div class="folio-badges">${skillBadges(data.skills)}</div></section>` : ""}
+      ${data.education?.length ? `<section class="folio-sec"><h2 class="sec-label">Education</h2>${eduItems(data)}</section>` : ""}
+    </aside>
+  </div>
+</div>
+${themeToggle}
+</body></html>`;
+
+  const css = sharedCss + `
+:root{--acc:${acc};}
+[data-theme="light"]{
+  --bg:#fdfcf9;--bg-header:#111108;--text-primary:#111108;--text-muted:#555540;
+  --text-faint:#999980;--accent:${acc};--label:#aaa090;
+  --card-bg:#fff;--card-border:#e8e5de;--card-shadow:rgba(0,0,0,.06);
+  --badge-bg:transparent;--badge-border:rgba(0,0,0,.18);--badge-color:#444430;
+  --line:#e5e2d8;
 }
-html.dark .min-body .min-name { color: #e8e6e0; }
-html.dark .min-body .min-role { color: #888; }
-html.dark .min-body .min-meta-item { color: #aaa; }
-html.dark .min-body .min-links a { color: #ccc; border-color: #333; }
-html.dark .min-body .min-links a:hover { border-color: #ccc; }
-html.dark .min-body .min-divider { border-color: #e8e6e0; }
-html.dark .min-body .min-section-title { color: #888; }
-html.dark .min-body .min-about { color: #ccc; }
-html.dark .min-body .min-skills .skill-badge { border-color: #555; color: #bbb; }
-html.dark .min-body .project-card { border-color: #2a2a2a; background: #1a1a1a; }
-html.dark .min-body .project-title { color: #e8e6e0; }
-html.dark .min-body .project-desc { color: #999; }
-html.dark .min-body .project-links a { color: #bbb; }
-html.dark .min-body .exp-item, html.dark .min-body .edu-item { border-color: #2a2a2a; }
-html.dark .min-body .exp-role, html.dark .min-body .edu-degree { color: #e8e6e0; }
-html.dark .min-body .exp-company, html.dark .min-body .edu-school { color: #888; }
-.min-container {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 3.5rem 2rem 5rem;
+[data-theme="dark"]{
+  --bg:#0e0d09;--bg-header:#000;--text-primary:#f0edde;--text-muted:#aaa880;
+  --text-faint:#706e50;--accent:${acc};--label:#706e50;
+  --card-bg:#1a1810;--card-border:rgba(255,255,255,.08);--card-shadow:rgba(0,0,0,.4);
+  --badge-bg:transparent;--badge-border:rgba(255,255,255,.15);--badge-color:#ccc8a8;
+  --line:rgba(255,255,255,.07);
 }
-.min-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 1rem;
+.folio-body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text-primary);transition:background .3s,color .3s;}
+.folio-header{
+  background:var(--bg-header);color:#f0ede6;
+  padding:4rem 2rem 3rem;
+  display:flex;align-items:flex-end;justify-content:space-between;gap:2rem;
+  transition:background .3s;
 }
-.min-header-left { flex: 1; }
-.min-name {
-  font-size: clamp(2rem, 5vw, 3.25rem);
-  font-weight: 300;
-  letter-spacing: -.04em;
-  line-height: 1.1;
-  margin-bottom: .2rem;
-  color: #111;
-  transition: color 0.3s;
+.folio-header-inner{flex:1;}
+.folio-eyebrow{font-size:.7rem;text-transform:uppercase;letter-spacing:.25em;color:${acc};margin-bottom:.75rem;}
+.folio-name{
+  font-family:'Fraunces',Georgia,serif;
+  font-size:clamp(3rem,8vw,7rem);font-weight:900;
+  line-height:.95;letter-spacing:-.04em;
+  margin-bottom:1.5rem;
 }
-.min-role {
-  font-family: 'DM Mono', monospace;
-  font-size: .78rem;
-  color: #888;
-  letter-spacing: .04em;
+.folio-header-foot{display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;}
+.folio-hlinks{display:flex;gap:1rem;flex-wrap:wrap;}
+.folio-hlinks a{font-size:.8rem;color:rgba(240,237,230,.65);border-bottom:1px solid transparent;transition:border-color .2s,color .2s;}
+.folio-hlinks a:hover{color:#fff;border-color:#fff;text-decoration:none;}
+.folio-loc{font-size:.75rem;color:rgba(240,237,230,.4);}
+.folio-av{width:120px;height:150px;object-fit:cover;border-radius:.5rem;flex-shrink:0;
+  outline:3px solid ${acc};outline-offset:4px;}
+.folio-wrap{max-width:1080px;margin:0 auto;padding:3rem 2rem 5rem;}
+.folio-lead{
+  font-family:'Fraunces',Georgia,serif;
+  font-size:clamp(1.3rem,3vw,1.9rem);font-weight:300;font-style:italic;
+  line-height:1.5;color:var(--text-muted);max-width:70ch;
+  border-left:3px solid ${acc};padding-left:1.5rem;margin-bottom:3rem;
 }
-.min-avatar {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #eee;
-  flex-shrink: 0;
-  margin-left: 1.5rem;
-}
-.min-meta {
-  display: flex;
-  flex-direction: column;
-  gap: .3rem;
-  margin-bottom: .75rem;
-}
-.min-meta-item { font-size: .88rem; color: #555; }
-.min-bio { font-style: italic; max-width: 55ch; }
-.min-links { margin-bottom: 1.5rem; }
-.min-links a { color: #111; font-size: .82rem; border-bottom: 1px solid #ddd; padding-bottom: 1px; transition: border-color .2s; }
-.min-links a:hover { border-color: #111; text-decoration: none; }
-.min-divider { border: none; border-top: 2px solid #111; margin-bottom: 2.5rem; transition: border-color 0.3s; }
-.min-body-grid {
-  display: grid;
-  grid-template-columns: 1fr 280px;
-  gap: 3rem;
-}
-@media(max-width: 680px) { .min-body-grid { grid-template-columns: 1fr; } }
-.min-section { margin-bottom: 2.5rem; }
-.min-section-title {
-  font-size: .65rem;
-  text-transform: uppercase;
-  letter-spacing: .2em;
-  color: #999;
-  margin-bottom: 1rem;
-  font-weight: 500;
-}
-.min-about { font-size: .95rem; line-height: 1.85; color: #333; max-width: 58ch; }
-.min-skills { display: flex; flex-wrap: wrap; gap: .25rem; }
-.min-skills .skill-badge { border-color: #ccc; color: #444; font-size: .68rem; }
-.min-project-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(240px,1fr)); gap: .85rem; }
-.min-main .project-card { border-color: #eee; }
-.min-main .project-title { color: #111; font-size: .9rem; }
-.min-main .project-desc { color: #666; }
-.min-aside .exp-item, .min-aside .edu-item { border-color: #eee; }
-.min-aside .exp-role, .min-aside .edu-degree { color: #111; font-size: .85rem; }
-.min-aside .exp-company, .min-aside .edu-school { color: #888; }
+.folio-cols{display:grid;grid-template-columns:1fr 260px;gap:3.5rem;}
+@media(max-width:760px){.folio-cols{grid-template-columns:1fr;}}
+.folio-sec{margin-bottom:2.75rem;}
+.folio-body-text{font-size:.95rem;line-height:1.85;color:var(--text-muted);max-width:62ch;}
+.folio-badges{display:flex;flex-wrap:wrap;gap:.25rem;}
+.folio-pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;margin-top:.75rem;}
 `;
-
   return { html, css };
 }
 
-// ── Public API ────────────────────────────────────────────────────────────────
-export function buildSite(
-  data: PortfolioData,
-  template: TemplateId,
-): { html: string; css: string } {
-  if (template === "split") return buildSplit(data);
-  if (template === "editorial") return buildEditorial(data);
-  if (template === "aurora") return buildAurora(data);
-  if (template === "minimal") return buildMinimal(data);
-  return buildCentered(data);
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 4. VOID  — brutalist terminal / hacker aesthetic
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function buildVoid(data: PortfolioData): { html: string; css: string } {
+  const acc = data.accentColor || "#00ff88";
+  const gallery = data.galleryImages?.length ? gallerySection(data.galleryImages) : "";
+  const skills = (data.skills ?? []).map(s => `<span class="badge v-badge">${esc(s)}</span>`).join("");
+  const html = `<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>${esc(data.name)} — Portfolio</title>
+<meta name="description" content="${esc(data.bio || data.about || data.name + "'s portfolio")}" />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,300&display=swap" rel="stylesheet">
+</head>
+<body class="void-body">
+<div class="void-scan" aria-hidden="true"></div>
+<div class="void-wrap">
+  <header class="void-header">
+    <div class="void-prompt"><span class="void-cursor">▋</span></div>
+    <h1 class="void-name">${esc(data.name)}</h1>
+    ${data.title ? `<div class="void-role">// ${esc(data.title)}</div>` : ""}
+    ${data.location ? `<div class="void-meta"># ${esc(data.location)}</div>` : ""}
+    ${data.bio ? `<div class="void-meta void-bio">> ${esc(data.bio)}</div>` : ""}
+    <div class="void-links">${socialLinks(data)}</div>
+  </header>
+
+  ${gallery}
+
+  ${data.about ? `
+  <section class="void-block">
+    <div class="void-block-label">$ cat about.txt</div>
+    <p class="void-text">${esc(data.about)}</p>
+  </section>` : ""}
+
+  ${data.skills?.length ? `
+  <section class="void-block">
+    <div class="void-block-label">$ ls ./skills</div>
+    <div class="void-skills">${skills}</div>
+  </section>` : ""}
+
+  ${data.experience?.length ? `
+  <section class="void-block">
+    <div class="void-block-label">$ cat experience.log</div>
+    ${expItems(data)}
+  </section>` : ""}
+
+  ${data.education?.length ? `
+  <section class="void-block">
+    <div class="void-block-label">$ cat education.log</div>
+    ${eduItems(data)}
+  </section>` : ""}
+
+  ${data.projects?.filter(p=>p.include!==false).length ? `
+  <section class="void-block">
+    <div class="void-block-label">$ ls ./projects</div>
+    <div class="void-pgrid">${projectCards(data, "v-pcard")}</div>
+  </section>` : ""}
+
+</div>
+${themeToggle}
+</body></html>`;
+
+  const css = sharedCss + `
+:root{--acc:${acc};}
+[data-theme="dark"]{
+  --bg:#020c06;--text-primary:${acc};--text-muted:rgba(0,255,136,.65);
+  --text-faint:rgba(0,255,136,.35);--accent:${acc};--label:rgba(0,255,136,.5);
+  --card-bg:rgba(0,255,136,.03);--card-border:rgba(0,255,136,.15);--card-shadow:rgba(0,255,136,.05);
+  --badge-bg:rgba(0,255,136,.08);--badge-border:rgba(0,255,136,.3);--badge-color:${acc};
+  --line:rgba(0,255,136,.15);
+}
+[data-theme="light"]{
+  --bg:#f0fff6;--text-primary:#003318;--text-muted:#1a5c36;--text-faint:#5a9070;
+  --accent:#006633;--label:#5a9070;
+  --card-bg:#e8f8ef;--card-border:rgba(0,102,51,.2);--card-shadow:rgba(0,80,40,.07);
+  --badge-bg:rgba(0,102,51,.07);--badge-border:rgba(0,102,51,.25);--badge-color:#004422;
+  --line:rgba(0,102,51,.15);
+}
+.void-body{font-family:'JetBrains Mono',monospace;background:var(--bg);color:var(--text-primary);min-height:100vh;transition:background .3s,color .3s;}
+.void-scan{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,136,.012) 2px,rgba(0,255,136,.012) 4px);
+}
+[data-theme="light"] .void-scan{background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,80,40,.015) 2px,rgba(0,80,40,.015) 4px);}
+.void-wrap{position:relative;z-index:1;max-width:820px;margin:0 auto;padding:3rem 1.25rem 5rem;}
+.void-header{border:1px solid var(--line);border-radius:.5rem;padding:2rem;margin-bottom:2rem;}
+.void-prompt{font-size:.7rem;color:var(--text-faint);margin-bottom:.5rem;letter-spacing:.05em;}
+.void-cursor{animation:blink 1s step-end infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+.void-name{font-size:clamp(1.8rem,5vw,3.2rem);font-weight:700;letter-spacing:-.02em;line-height:1.1;margin-bottom:.4rem;text-shadow:0 0 20px ${acc}55;}
+.void-role{font-size:.8rem;color:var(--text-muted);margin-bottom:.2rem;font-style:italic;}
+.void-meta{font-size:.78rem;color:var(--text-faint);margin-bottom:.15rem;}
+.void-bio{margin-bottom:.75rem;max-width:55ch;}
+.void-links{display:flex;flex-wrap:wrap;gap:.5rem .9rem;margin-top:.75rem;}
+.void-links a{font-size:.75rem;color:var(--accent);border:1px solid var(--line);padding:.2em .65em;border-radius:.25rem;transition:background .2s,color .2s;}
+.void-links a:hover{background:var(--accent);color:var(--bg);text-decoration:none;}
+.void-block{border-left:2px solid var(--line);padding:1.25rem 1.5rem;margin-bottom:1.75rem;}
+.void-block-label{font-size:.72rem;color:var(--label);margin-bottom:1rem;letter-spacing:.05em;}
+.void-text{font-size:.82rem;line-height:1.85;color:var(--text-muted);max-width:64ch;white-space:pre-wrap;}
+.void-skills{display:flex;flex-wrap:wrap;gap:.25rem;}
+.v-badge{border-radius:.25rem !important;font-family:'JetBrains Mono',monospace;}
+.void-pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:.85rem;margin-top:.5rem;}
+.v-pcard{border-radius:.5rem !important;}
+`;
+  return { html, css };
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 5. BLOOM  — soft pastel organic with warm gradients
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function buildBloom(data: PortfolioData): { html: string; css: string } {
+  const acc = data.accentColor || "#f97316";
+  const gallery = data.galleryImages?.length ? gallerySection(data.galleryImages) : "";
+  const html = `<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>${esc(data.name)} — Portfolio</title>
+<meta name="description" content="${esc(data.bio || data.about || data.name + "'s portfolio")}" />
+<link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,300;0,400;0,600;0,700;0,800;1,300&family=Lora:ital@1&display=swap" rel="stylesheet">
+</head>
+<body class="bloom-body">
+<div class="bloom-top-gradient" aria-hidden="true"></div>
+<div class="bloom-wrap">
+
+  <header class="bloom-hero">
+    <div class="bloom-pill-row">
+      ${data.location ? `<span class="bloom-pill">📍 ${esc(data.location)}</span>` : ""}
+      ${data.title ? `<span class="bloom-pill bloom-pill-acc">${esc(data.title)}</span>` : ""}
+    </div>
+    <div class="bloom-hero-inner">
+      <div class="bloom-hero-text">
+        <h1 class="bloom-name">${esc(data.name)}</h1>
+        ${data.bio ? `<p class="bloom-bio">${esc(data.bio)}</p>` : ""}
+        <div class="bloom-links">${socialLinks(data)}</div>
+      </div>
+      ${data.avatar ? `<div class="bloom-av-wrap"><img src="${esc(data.avatar)}" class="bloom-av" alt="${esc(data.name)}" /></div>` : ""}
+    </div>
+  </header>
+
+  ${gallery}
+
+  ${data.about || data.skills?.length ? `
+  <div class="bloom-row">
+    ${data.about ? `
+    <div class="bloom-card bloom-about-card">
+      <div class="sec-label">About</div>
+      <p class="bloom-about">${esc(data.about)}</p>
+    </div>` : ""}
+    ${data.skills?.length ? `
+    <div class="bloom-card bloom-skills-card">
+      <div class="sec-label">Skills</div>
+      <div class="bloom-badges">${skillBadges(data.skills)}</div>
+    </div>` : ""}
+  </div>` : ""}
+
+  ${data.experience?.length ? `
+  <div class="bloom-card">
+    <div class="sec-label">Experience</div>
+    ${expItems(data)}
+  </div>` : ""}
+
+  ${data.education?.length ? `
+  <div class="bloom-card">
+    <div class="sec-label">Education</div>
+    ${eduItems(data)}
+  </div>` : ""}
+
+  ${data.projects?.filter(p=>p.include!==false).length ? `
+  <div class="bloom-card">
+    <div class="sec-label">Projects</div>
+    <div class="bloom-pgrid">${projectCards(data)}</div>
+  </div>` : ""}
+
+</div>
+${themeToggle}
+</body></html>`;
+
+  const css = sharedCss + `
+:root{--acc:${acc};}
+[data-theme="light"]{
+  --bg:#fef9f5;--text-primary:#1c1208;--text-muted:#6b5040;--text-faint:#b09880;
+  --accent:${acc};--label:#c0a890;
+  --card-bg:#fff;--card-border:#f0e8df;--card-shadow:rgba(200,120,60,.06);
+  --badge-bg:#fff7f0;--badge-border:#f0cdb0;--badge-color:#7a4010;
+  --line:#f0e8df;--grad1:#fde7d0;--grad2:#fef3ea;--grad3:#fff0e8;
+}
+[data-theme="dark"]{
+  --bg:#120d08;--text-primary:#f5e8d8;--text-muted:#c09070;--text-faint:#806050;
+  --accent:${acc};--label:#806050;
+  --card-bg:#1e160f;--card-border:rgba(255,200,120,.1);--card-shadow:rgba(0,0,0,.3);
+  --badge-bg:rgba(249,115,22,.08);--badge-border:rgba(249,115,22,.25);--badge-color:#fdba74;
+  --line:rgba(255,200,120,.1);--grad1:#2a1a0e;--grad2:#1e150c;--grad3:#160f08;
+}
+.bloom-body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text-primary);transition:background .3s,color .3s;overflow-x:hidden;}
+.bloom-top-gradient{position:fixed;top:0;left:0;right:0;height:320px;background:radial-gradient(ellipse at top,var(--grad1),transparent 70%);z-index:0;pointer-events:none;transition:background .3s;}
+.bloom-wrap{position:relative;z-index:1;max-width:860px;margin:0 auto;padding:3rem 1.25rem 5rem;}
+.bloom-hero{margin-bottom:2rem;}
+.bloom-pill-row{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1.25rem;}
+.bloom-pill{font-size:.72rem;padding:.3em .85em;border-radius:9999px;background:var(--card-bg);border:1px solid var(--card-border);color:var(--text-muted);}
+.bloom-pill-acc{background:${acc};border-color:${acc};color:#fff;}
+.bloom-hero-inner{display:flex;align-items:flex-start;justify-content:space-between;gap:2rem;}
+.bloom-hero-text{flex:1;}
+.bloom-name{font-size:clamp(2.2rem,6vw,4rem);font-weight:800;letter-spacing:-.04em;line-height:1.05;margin-bottom:.75rem;}
+.bloom-bio{font-family:'Lora',Georgia,serif;font-size:1rem;font-style:italic;color:var(--text-muted);line-height:1.72;margin-bottom:1rem;max-width:52ch;}
+.bloom-links{display:flex;flex-wrap:wrap;gap:.4rem .9rem;}
+.bloom-links a{font-size:.8rem;color:var(--accent);font-weight:600;}
+.bloom-av-wrap{flex-shrink:0;}
+.bloom-av{
+  width:100px;height:100px;border-radius:50%;object-fit:cover;
+  border:4px solid var(--card-border);
+  box-shadow:0 0 0 6px var(--grad1);
+}
+.bloom-row{display:grid;grid-template-columns:1fr auto;gap:1rem;margin-bottom:1rem;align-items:start;}
+@media(max-width:640px){.bloom-row{grid-template-columns:1fr;}}
+.bloom-card{
+  background:var(--card-bg);border:1px solid var(--card-border);
+  border-radius:1.5rem;padding:1.5rem 1.5rem 1.25rem;
+  margin-bottom:1rem;
+  box-shadow:0 2px 24px var(--card-shadow);
+}
+.bloom-about-card{flex:1;}
+.bloom-skills-card{min-width:190px;max-width:240px;}
+@media(max-width:640px){.bloom-skills-card{max-width:100%;}}
+.bloom-about{font-size:.93rem;line-height:1.82;color:var(--text-muted);max-width:60ch;}
+.bloom-badges{display:flex;flex-wrap:wrap;gap:.25rem;}
+.bloom-pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:.85rem;margin-top:.75rem;}
+`;
+  return { html, css };
+}
+
+// ── Public API ─────────────────────────────────────────────────────────────────
+export function buildSite(data: PortfolioData, template: TemplateId): { html: string; css: string } {
+  if (template === "split")     return buildPrism(data);      // split → Prism
+  if (template === "editorial") return buildFolio(data);      // editorial → Folio
+  if (template === "aurora")    return buildVoid(data);       // aurora → Void
+  if (template === "minimal")   return buildBloom(data);      // minimal → Bloom
+  return buildNova(data);                                      // centered → Nova
 }
