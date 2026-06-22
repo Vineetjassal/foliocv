@@ -1,4 +1,4 @@
-export type TemplateId = 'centered' | 'split' | 'editorial';
+export type TemplateId = "centered" | "split" | "editorial";
 
 export interface Project {
   name: string;
@@ -7,9 +7,9 @@ export interface Project {
   githubUrl?: string;
   language?: string;
   stars?: number;
-  image?: string;       // first/primary image (legacy)
-  images?: string[];    // carousel images (can be base64 or URLs)
-  videos?: string[];    // video URLs (mp4/webm/youtube)
+  image?: string; // first/primary image (legacy)
+  images?: string[]; // carousel images (can be base64 or URLs)
+  videos?: string[]; // video URLs (mp4/webm/youtube)
   include?: boolean;
 }
 

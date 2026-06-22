@@ -1,6 +1,6 @@
 export function extractUsername(input: string): string {
   const m = input.match(/github\.com\/([\w-]+)/);
-  return m ? m[1] : input.replace(/^@/, '').trim();
+  return m ? m[1] : input.replace(/^@/, "").trim();
 }
 
 export async function fetchGithub(username: string) {
