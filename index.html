@@ -9,9 +9,259 @@
       name="description"
       content="Drop a résumé JSON, paste your GitHub handle. FolioCV crafts a quiet, beautiful portfolio you can tweak inline and download as plain HTML."
     />
+    <style>
+      /* ── Loader overlay ─────────────────────────────────────────── */
+      #folio-loader {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        background: #07070f;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2.5rem;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        transition: opacity 0.65s cubic-bezier(.4,0,.2,1), transform 0.65s cubic-bezier(.4,0,.2,1);
+      }
+      #folio-loader.fl-out {
+        opacity: 0;
+        transform: scale(1.04);
+        pointer-events: none;
+      }
+
+      /* Animated mesh background */
+      #folio-loader::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(ellipse 60% 50% at 20% 20%, rgba(99,102,241,.18) 0%, transparent 60%),
+          radial-gradient(ellipse 50% 40% at 80% 80%, rgba(168,85,247,.13) 0%, transparent 55%),
+          radial-gradient(ellipse 40% 35% at 55% 45%, rgba(6,182,212,.08) 0%, transparent 50%);
+        animation: fl-pulse 4s ease-in-out infinite alternate;
+        pointer-events: none;
+      }
+      @keyframes fl-pulse {
+        0%   { opacity: .7; transform: scale(1); }
+        100% { opacity: 1;  transform: scale(1.06); }
+      }
+
+      /* Logo mark */
+      .fl-logo {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: .6rem;
+      }
+      .fl-logo-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #6366f1, #a855f7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.6rem;
+        box-shadow: 0 0 40px rgba(99,102,241,.45);
+        animation: fl-icon-pop .6s cubic-bezier(.34,1.56,.64,1) both;
+      }
+      @keyframes fl-icon-pop {
+        from { transform: scale(0.5); opacity: 0; }
+        to   { transform: scale(1);   opacity: 1; }
+      }
+      .fl-wordmark {
+        font-size: 1.1rem;
+        font-weight: 700;
+        letter-spacing: .08em;
+        color: #e8e6f0;
+        animation: fl-fade-up .5s .2s both;
+      }
+      .fl-tagline {
+        font-size: .7rem;
+        letter-spacing: .15em;
+        color: rgba(200,195,220,.4);
+        text-transform: uppercase;
+        animation: fl-fade-up .5s .35s both;
+      }
+      @keyframes fl-fade-up {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+
+      /* Progress area */
+      .fl-progress-wrap {
+        position: relative;
+        z-index: 1;
+        width: min(320px, 80vw);
+        display: flex;
+        flex-direction: column;
+        gap: .75rem;
+        animation: fl-fade-up .5s .45s both;
+      }
+      .fl-bar-track {
+        width: 100%;
+        height: 3px;
+        background: rgba(255,255,255,.08);
+        border-radius: 9999px;
+        overflow: hidden;
+      }
+      .fl-bar-fill {
+        height: 100%;
+        width: 0%;
+        border-radius: 9999px;
+        background: linear-gradient(90deg, #6366f1, #a855f7, #06b6d4);
+        background-size: 200% 100%;
+        transition: width 0.12s linear;
+        animation: fl-bar-shimmer 1.8s linear infinite;
+        box-shadow: 0 0 12px rgba(99,102,241,.6);
+      }
+      @keyframes fl-bar-shimmer {
+        0%   { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+      }
+      .fl-status-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .fl-status {
+        font-size: .68rem;
+        color: rgba(200,195,220,.45);
+        letter-spacing: .06em;
+        min-width: 160px;
+      }
+      .fl-percent {
+        font-size: .8rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        color: rgba(168,139,250,.9);
+        letter-spacing: .02em;
+      }
+
+      /* Dot row */
+      .fl-dots {
+        display: flex;
+        gap: .45rem;
+        position: relative;
+        z-index: 1;
+        animation: fl-fade-up .5s .55s both;
+      }
+      .fl-dot {
+        width: .35rem;
+        height: .35rem;
+        border-radius: 50%;
+        background: rgba(99,102,241,.5);
+        animation: fl-dot-bounce .9s ease-in-out infinite;
+      }
+      .fl-dot:nth-child(2) { animation-delay: .15s; }
+      .fl-dot:nth-child(3) { animation-delay: .30s; }
+      @keyframes fl-dot-bounce {
+        0%, 80%, 100% { transform: scale(1); opacity: .5; }
+        40%            { transform: scale(1.6); opacity: 1; background: #a855f7; }
+      }
+    </style>
   </head>
   <body>
+
+    <!-- ── Loader (shown before React mounts) ───────────────────── -->
+    <div id="folio-loader" role="status" aria-label="Loading FolioCV">
+      <div class="fl-logo">
+        <div class="fl-logo-icon">✦</div>
+        <div class="fl-wordmark">FolioCV</div>
+        <div class="fl-tagline">Crafting your canvas</div>
+      </div>
+
+      <div class="fl-progress-wrap">
+        <div class="fl-bar-track">
+          <div class="fl-bar-fill" id="fl-fill"></div>
+        </div>
+        <div class="fl-status-row">
+          <span class="fl-status" id="fl-status">Initialising…</span>
+          <span class="fl-percent" id="fl-pct">0%</span>
+        </div>
+      </div>
+
+      <div class="fl-dots">
+        <div class="fl-dot"></div>
+        <div class="fl-dot"></div>
+        <div class="fl-dot"></div>
+      </div>
+    </div>
+
+    <!-- ── App root ──────────────────────────────────────────────── -->
     <div id="root"></div>
+
+    <!-- ── Loader progress script (runs before React) ───────────── -->
+    <script>
+      (function () {
+        var fill   = document.getElementById('fl-fill');
+        var pct    = document.getElementById('fl-pct');
+        var status = document.getElementById('fl-status');
+        var loader = document.getElementById('folio-loader');
+
+        var steps = [
+          { to: 15,  label: 'Initialising…',          delay: 80  },
+          { to: 30,  label: 'Loading resources…',      delay: 60  },
+          { to: 48,  label: 'Building components…',    delay: 50  },
+          { to: 63,  label: 'Preparing templates…',    delay: 45  },
+          { to: 77,  label: 'Setting up editor…',      delay: 40  },
+          { to: 89,  label: 'Almost there…',           delay: 35  },
+          { to: 95,  label: 'Finalising…',             delay: 30  },
+        ];
+
+        var cur = 0;
+        var stepIdx = 0;
+        var timer = null;
+
+        function setProgress(n) {
+          cur = n;
+          fill.style.width = n + '%';
+          pct.textContent  = n + '%';
+        }
+
+        function runStep() {
+          if (stepIdx >= steps.length) return;
+          var s = steps[stepIdx];
+          status.textContent = s.label;
+          var target = s.to;
+          timer = setInterval(function () {
+            if (cur < target) {
+              setProgress(cur + 1);
+            } else {
+              clearInterval(timer);
+              stepIdx++;
+              setTimeout(runStep, 180);
+            }
+          }, s.delay);
+        }
+
+        runStep();
+
+        // Expose dismiss function for React to call
+        window.__folioLoaderDismiss = function () {
+          clearInterval(timer);
+          // Snap to 100
+          var snap = setInterval(function () {
+            if (cur < 100) {
+              setProgress(Math.min(cur + 3, 100));
+            } else {
+              clearInterval(snap);
+              status.textContent = 'Ready!';
+              setTimeout(function () {
+                loader.classList.add('fl-out');
+                setTimeout(function () {
+                  loader.style.display = 'none';
+                }, 700);
+              }, 280);
+            }
+          }, 18);
+        };
+      })();
+    </script>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
