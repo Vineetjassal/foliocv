@@ -18,6 +18,8 @@ export const emptyPortfolio: PortfolioData = {
   links: [],
   galleryImages: [],
   githubSync: false,
+  accentColor: "#7c3aed",
+  fontFamily: "inter",
 };
 
 interface Store {
