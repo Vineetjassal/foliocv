@@ -257,8 +257,19 @@ function Landing() {
 
       {/* FOOTER */}
       <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-8 text-xs text-muted-foreground">
+        <div className="mx-auto flex max-w-4xl flex-col items-center gap-4 px-6 py-8 sm:flex-row sm:justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-2"><Logo size={28} /><span>FolioCV</span></div>
+          <a
+            href="https://peerlist.io/vineetjassal/project/foliocv--resume-to-portfolio-in-seconds"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img
+              src="https://peerlist.io/api/v1/projects/embed/PRJHMQ6BELPRQNGBLHJBAEQMQPENEL?showUpvote=true&theme=light"
+              alt="FolioCV — Resume to portfolio, in seconds"
+              style={{ width: 'auto', height: '72px' }}
+            />
+          </a>
           <div className="flex items-center gap-4">
             <span>Made with care · No accounts, no tracking</span>
             <a href="https://github.com/vineetjassal" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">@vineetjassal</a>
