@@ -92,34 +92,6 @@ skill-builder-express/
 
 ---
 
-## 📦 Deploying
-
-### Vercel (recommended)
-
-1. Push this repo to GitHub
-2. Import it at [vercel.com/new](https://vercel.com/new)
-3. Framework: **Other** (leave as default — `vercel.json` handles it)
-4. Click **Deploy**
-
-Vercel will automatically detect the `vercel.json` config and use the correct build output.
-
-### Cloudflare Pages
-
-```bash
-npm run build
-# Deploy .output/public as static + .output/server as a Worker
-```
-
-### Netlify
-
-Set build command to `npm run build` and publish directory to `.output/public`, and add a `_redirects` file:
-
-```
-/* /index.html 200
-```
-
----
-
 ## 🤝 Contributing
 
 Pull requests are welcome! For major changes, please open an issue first.
