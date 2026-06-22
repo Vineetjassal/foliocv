@@ -1,16 +1,16 @@
-import { create } from 'zustand';
-import type { PortfolioData, TemplateId } from './types';
+import { create } from "zustand";
+import type { PortfolioData, TemplateId } from "./types";
 
 export const emptyPortfolio: PortfolioData = {
-  name: '',
-  title: '',
-  bio: '',
-  about: '',
-  avatar: '',
-  location: '',
-  email: '',
-  website: '',
-  github: '',
+  name: "",
+  title: "",
+  bio: "",
+  about: "",
+  avatar: "",
+  location: "",
+  email: "",
+  website: "",
+  github: "",
   skills: [],
   experience: [],
   education: [],
@@ -28,7 +28,7 @@ interface Store {
 
 export const useStore = create<Store>((set) => ({
   data: null,
-  template: 'centered',
+  template: "centered",
   setData: (d) => set({ data: d }),
   // patch NEVER touches skills unless caller explicitly includes it
   patch: (p) =>

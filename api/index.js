@@ -1,6 +1,6 @@
 // Vercel serverless function entry point
 // Builds the TanStack Start app and serves it via Vercel Node runtime
-import { createServer } from 'node:http';
+import { createServer } from "node:http";
 
 let handler;
 
@@ -8,12 +8,12 @@ async function getHandler() {
   if (!handler) {
     try {
       // Try to import the built server output
-      const mod = await import('../dist/server/index.mjs');
+      const mod = await import("../dist/server/index.mjs");
       handler = mod.default || mod;
     } catch {
       // Fallback: serve a simple HTML page
       handler = (req, res) => {
-        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.writeHead(200, { "Content-Type": "text/html" });
         res.end(`<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">

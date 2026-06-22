@@ -4,7 +4,11 @@ import type { PortfolioData } from "./types";
 function normalizeSkills(raw: any): string[] {
   if (!raw) return [];
   if (Array.isArray(raw)) return raw.map(String).filter(Boolean);
-  if (typeof raw === "string") return raw.split(",").map((s) => s.trim()).filter(Boolean);
+  if (typeof raw === "string")
+    return raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
   return [];
 }
 
@@ -28,14 +32,13 @@ export function parseResumeJson(raw: any): Partial<PortfolioData> {
       about: raw.about ?? b.summary ?? "",
       email: b.email ?? "",
       website: b.url ?? b.website ?? "",
-      github:
-        (b.profiles ?? []).find((p: any) => /github/i.test(p.network ?? ""))?.username ?? "",
+      github: (b.profiles ?? []).find((p: any) => /github/i.test(p.network ?? ""))?.username ?? "",
       avatar: b.image ?? "",
       skills: normalizeSkills(
         (raw.skills ?? [])
           .flatMap((s: any) => (s.keywords?.length ? s.keywords : [s.name]))
           .filter(Boolean)
-          .slice(0, 24)
+          .slice(0, 24),
       ),
       experience: (raw.work ?? []).map((w: any) => ({
         role: w.position ?? w.role ?? "",

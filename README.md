@@ -79,16 +79,16 @@ skill-builder-express/
 
 ## 🛠 Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Framework | [TanStack Start](https://tanstack.com/start) + [React 19](https://react.dev) |
-| Routing | [TanStack Router](https://tanstack.com/router) (file-based) |
-| Styling | [Tailwind CSS v4](https://tailwindcss.com) |
-| State | [Zustand](https://zustand-demo.pmnd.rs/) |
-| Animation | [GSAP](https://gsap.com/) |
-| Build | [Vite 8](https://vite.dev/) + [Nitro](https://nitro.build/) |
-| UI Components | [shadcn/ui](https://ui.shadcn.com/) + [Radix UI](https://www.radix-ui.com/) |
-| Zip output | [JSZip](https://stuk.github.io/jszip/) |
+| Layer         | Technology                                                                   |
+| ------------- | ---------------------------------------------------------------------------- |
+| Framework     | [TanStack Start](https://tanstack.com/start) + [React 19](https://react.dev) |
+| Routing       | [TanStack Router](https://tanstack.com/router) (file-based)                  |
+| Styling       | [Tailwind CSS v4](https://tailwindcss.com)                                   |
+| State         | [Zustand](https://zustand-demo.pmnd.rs/)                                     |
+| Animation     | [GSAP](https://gsap.com/)                                                    |
+| Build         | [Vite 8](https://vite.dev/) + [Nitro](https://nitro.build/)                  |
+| UI Components | [shadcn/ui](https://ui.shadcn.com/) + [Radix UI](https://www.radix-ui.com/)  |
+| Zip output    | [JSZip](https://stuk.github.io/jszip/)                                       |
 
 ---
 

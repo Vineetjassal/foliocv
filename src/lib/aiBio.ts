@@ -5,31 +5,30 @@
  * (pipe-separated tokens, abbreviations, @mentions, certifications, awards).
  */
 
-const HF_URL =
-  'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2';
+const HF_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2";
 
 // ── Abbreviation / shorthand dictionary ──────────────────────────────────────
 const EXPAND: Record<string, string> = {
-  ML: 'Machine Learning',
-  AI: 'Artificial Intelligence',
-  BS: 'Bachelor of Science',
-  BE: 'Bachelor of Engineering',
-  BTech: 'B.Tech',
-  MS: 'Master of Science',
-  PhD: 'PhD',
-  SWE: 'Software Engineer',
-  SDE: 'Software Development Engineer',
-  DS: 'Data Science',
-  NLP: 'Natural Language Processing',
-  CV: 'Computer Vision',
-  FS: 'Full Stack',
-  FE: 'Frontend',
-  BE2: 'Backend',
-  DevOps: 'DevOps',
-  POTM: 'Profile of the Month',
-  OSS: 'Open Source',
-  Hons: 'Honours',
-  'Hons.': 'Honours',
+  ML: "Machine Learning",
+  AI: "Artificial Intelligence",
+  BS: "Bachelor of Science",
+  BE: "Bachelor of Engineering",
+  BTech: "B.Tech",
+  MS: "Master of Science",
+  PhD: "PhD",
+  SWE: "Software Engineer",
+  SDE: "Software Development Engineer",
+  DS: "Data Science",
+  NLP: "Natural Language Processing",
+  CV: "Computer Vision",
+  FS: "Full Stack",
+  FE: "Frontend",
+  BE2: "Backend",
+  DevOps: "DevOps",
+  POTM: "Profile of the Month",
+  OSS: "Open Source",
+  Hons: "Honours",
+  "Hons.": "Honours",
 };
 
 function expandAbbr(text: string): string {
@@ -69,7 +68,9 @@ function parseBio(raw: string): ParsedBio {
       certs.push(expandAbbr(t));
     }
     // Education — degree patterns
-    else if (/\b(BS|BE|MS|BTech|B\.Tech|B\.Sc|Bachelor|Master|PhD|Maths|Math|Science|Hons)\b/i.test(t)) {
+    else if (
+      /\b(BS|BE|MS|BTech|B\.Tech|B\.Sc|Bachelor|Master|PhD|Maths|Math|Science|Hons)\b/i.test(t)
+    ) {
       education.push(expandAbbr(t));
     }
     // Awards — POTM, award, winner, top, #1
@@ -79,17 +80,20 @@ function parseBio(raw: string): ParsedBio {
     // Organisations — @mention
     else if (/@\w+/.test(t)) {
       // Strip leading @ from org name
-      orgs.push(t.replace(/@(\w+)/g, '$1'));
+      orgs.push(t.replace(/@(\w+)/g, "$1"));
     }
     // Building / building X projects
     else if (/^building\s+/i.test(t)) {
-      projects.push(t.replace(/^building\s+/i, '').trim());
+      projects.push(t.replace(/^building\s+/i, "").trim());
     }
     // Role-like tokens (contains Engineer, Developer, Scientist, etc.)
-    else if (/engineer|developer|scientist|designer|founder|researcher|analyst|architect|lead|manager|intern/i.test(t)) {
+    else if (
+      /engineer|developer|scientist|designer|founder|researcher|analyst|architect|lead|manager|intern/i.test(
+        t,
+      )
+    ) {
       roles.push(expandAbbr(t));
-    }
-    else {
+    } else {
       rest.push(expandAbbr(t));
     }
   }
@@ -103,52 +107,57 @@ function ruleBasedEnhance(raw: string, name: string, title: string): string {
   const parts: string[] = [];
 
   // Opener with name + primary role
-  const primaryRole = p.roles[0] || title || 'professional';
-  const displayName = name?.trim() || 'They';
+  const primaryRole = p.roles[0] || title || "professional";
+  const displayName = name?.trim() || "They";
 
   // Sentence 1 — who they are
   if (p.projects.length) {
-    parts.push(`${displayName} is a ${primaryRole} currently building ${p.projects.join(' and ')}.`);
+    parts.push(
+      `${displayName} is a ${primaryRole} currently building ${p.projects.join(" and ")}.`,
+    );
   } else {
     parts.push(`${displayName} is a ${primaryRole}.`);
   }
 
   // Sentence 2 — education
   if (p.education.length) {
-    const edu = p.education.join(', ');
-    parts.push(`${name?.split(' ')[0] || 'They'} is pursuing a ${edu}.`);
+    const edu = p.education.join(", ");
+    parts.push(`${name?.split(" ")[0] || "They"} is pursuing a ${edu}.`);
   }
 
   // Sentence 3 — certifications
   if (p.certs.length) {
-    parts.push(`${name?.split(' ')[0] || 'They'} holds certifications in ${p.certs.join(' and ')}, reinforcing a deep commitment to the field.`);
+    parts.push(
+      `${name?.split(" ")[0] || "They"} holds certifications in ${p.certs.join(" and ")}, reinforcing a deep commitment to the field.`,
+    );
   }
 
   // Sentence 4 — awards & recognition
   if (p.awards.length) {
-    const aw = p.awards.join(' and ');
-    parts.push(`Recognised for outstanding contributions, ${name?.split(' ')[0] || 'they'} has earned ${aw}.`);
+    const aw = p.awards.join(" and ");
+    parts.push(
+      `Recognised for outstanding contributions, ${name?.split(" ")[0] || "they"} has earned ${aw}.`,
+    );
   }
 
   // Sentence 5 — orgs / affiliations
   if (p.orgs.length) {
-    parts.push(`${name?.split(' ')[0] || 'They'} is affiliated with ${p.orgs.join(', ')}.`);
+    parts.push(`${name?.split(" ")[0] || "They"} is affiliated with ${p.orgs.join(", ")}.`);
   }
 
   // Sentence 6 — anything leftover
   if (p.rest.length) {
-    parts.push(p.rest.join(' '));
+    parts.push(p.rest.join(" "));
   }
 
-  return parts.join(' ').replace(/\s{2,}/g, ' ').trim();
+  return parts
+    .join(" ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
 }
 
 // ── HuggingFace AI call ───────────────────────────────────────────────────────
-export async function enhanceBio(
-  raw: string,
-  name: string,
-  title: string
-): Promise<string> {
+export async function enhanceBio(raw: string, name: string, title: string): Promise<string> {
   const prompt = `<s>[INST]
 You are a professional bio writer. The user has given you a messy LinkedIn-style bio string with pipe-separated fragments, abbreviations like "ML", "BS Maths", "POTM", "@Peerlist", certifications, and award shoutouts.
 
@@ -160,15 +169,15 @@ Your job:
 5. Tone: warm, professional, human — no clichés like "passionate about" or "results-driven".
 6. Output ONLY the rewritten bio. No explanations, no labels, no quotes.
 
-Name: ${name || 'the person'}
-Role: ${title || ''}
+Name: ${name || "the person"}
+Role: ${title || ""}
 Raw bio: "${raw}"
 [/INST]`;
 
   try {
     const res = await fetch(HF_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         inputs: prompt,
         parameters: {
@@ -179,17 +188,17 @@ Raw bio: "${raw}"
         },
       }),
     });
-    if (!res.ok) throw new Error('HF error');
+    if (!res.ok) throw new Error("HF error");
     const data = await res.json();
     const text: string =
-      (Array.isArray(data) ? data[0]?.generated_text : data?.generated_text) ?? '';
+      (Array.isArray(data) ? data[0]?.generated_text : data?.generated_text) ?? "";
     // Strip any echoed prompt or [INST] tags
     const clean = text
-      .replace(/^.*\[\/?INST\]/s, '')
-      .replace(/^\s*["']|["']\s*$/g, '')
+      .replace(/^.*\[\/?INST\]/s, "")
+      .replace(/^\s*["']|["']\s*$/g, "")
       .trim();
     if (clean.length > 20) return clean;
-    throw new Error('empty response');
+    throw new Error("empty response");
   } catch {
     return ruleBasedEnhance(raw, name, title);
   }
