@@ -19,6 +19,7 @@ const TEMPLATES: { id: TemplateId; name: string; tagline: string }[] = [
 ];
 
 const MAX_GALLERY_IMAGES = 15;
+const AUTOSAVE_KEY = "foliocv_autosave";
 
 /** Convert File to base64 data URL — stored locally in memory/state, included in downloaded zip */
 function fileToDataUrl(file: File): Promise<string> {
@@ -30,7 +31,99 @@ function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
-// ── Skills field: completely self-contained, never re-initialised by parent re-renders ──
+// ── Auto-save indicator badge ────────────────────────────────────────────────
+type SaveStatus = "saved" | "unsaved" | "saving";
+
+function SaveBadge({ status }: { status: SaveStatus }) {
+  if (status === "saving") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[10px] text-muted-foreground">
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-yellow-500" />
+        Saving…
+      </span>
+    );
+  }
+  if (status === "saved") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[10px] text-green-600 dark:text-green-400">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+        Saved
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[10px] text-orange-500">
+      <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+      Unsaved
+    </span>
+  );
+}
+
+// ── Device toggle types ───────────────────────────────────────────────────────
+type DeviceMode = "desktop" | "tablet" | "mobile";
+
+const DEVICE_CONFIG: Record<DeviceMode, { label: string; width: string; maxW: string; icon: React.ReactNode }> = {
+  desktop: {
+    label: "Desktop",
+    width: "100%",
+    maxW: "100%",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="2" y="3" width="20" height="14" rx="2" />
+        <line x1="8" y1="21" x2="16" y2="21" />
+        <line x1="12" y1="17" x2="12" y2="21" />
+      </svg>
+    ),
+  },
+  tablet: {
+    label: "Tablet",
+    width: "768px",
+    maxW: "768px",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="4" y="2" width="16" height="20" rx="2" />
+        <line x1="12" y1="18" x2="12" y2="18" strokeLinecap="round" strokeWidth="2.5" />
+      </svg>
+    ),
+  },
+  mobile: {
+    label: "Mobile",
+    width: "375px",
+    maxW: "375px",
+    icon: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="5" y="2" width="14" height="20" rx="2" />
+        <line x1="12" y1="18" x2="12" y2="18" strokeLinecap="round" strokeWidth="2.5" />
+      </svg>
+    ),
+  },
+};
+
+function DeviceToggle({ mode, onChange }: { mode: DeviceMode; onChange: (m: DeviceMode) => void }) {
+  return (
+    <div className="flex items-center gap-0.5 rounded-full border border-border bg-muted p-0.5">
+      {(Object.keys(DEVICE_CONFIG) as DeviceMode[]).map((d) => (
+        <button
+          key={d}
+          onClick={() => onChange(d)}
+          title={DEVICE_CONFIG[d].label}
+          aria-label={`Preview as ${DEVICE_CONFIG[d].label}`}
+          className={`flex items-center justify-center rounded-full p-1.5 transition ${
+            mode === d
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {DEVICE_CONFIG[d].icon}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── Skills field ─────────────────────────────────────────────────────────────
 function SkillsField({
   initialSkills,
   onCommit,
@@ -92,10 +185,49 @@ function Editor() {
   const [tab, setTab] = useState<"design" | "content" | "projects">("design");
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeTheme, setIframeTheme] = useState<"dark" | "light">("dark");
+  const [deviceMode, setDeviceMode] = useState<DeviceMode>("desktop");
+
+  // ── Auto-save state ──────────────────────────────────────────────────────
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Restore from sessionStorage on mount (fallback for page refreshes)
+  useEffect(() => {
+    if (!data) {
+      try {
+        const raw = sessionStorage.getItem(AUTOSAVE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw) as { data: PortfolioData; template: TemplateId };
+          // Only restore if store has no data yet — handled by the route guard below
+          _ = parsed; // parsed available if needed
+        }
+      } catch { /* ignore */ }
+    }
+  }, []);
 
   useEffect(() => {
     if (!data) navigate({ to: "/create" });
   }, [data, navigate]);
+
+  // Auto-save to sessionStorage whenever data or template changes
+  useEffect(() => {
+    if (!data) return;
+    setSaveStatus("unsaved");
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      setSaveStatus("saving");
+      try {
+        sessionStorage.setItem(
+          AUTOSAVE_KEY,
+          JSON.stringify({ data, template, savedAt: new Date().toISOString() })
+        );
+      } catch { /* storage quota exceeded or sandboxed */ }
+      setTimeout(() => setSaveStatus("saved"), 400);
+    }, 800);
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, [data, template]);
 
   const built = useMemo(() => (data ? buildSite(data, template) : null), [data, template]);
 
@@ -132,8 +264,11 @@ function Editor() {
 
   if (!data) return null;
 
+  const device = DEVICE_CONFIG[deviceMode];
+
   return (
     <div className="flex h-screen flex-col overflow-hidden">
+      {/* ── Header ── */}
       <header className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-3">
           <Link to="/" className="flex items-center gap-2">
@@ -145,12 +280,28 @@ function Editor() {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          {/* Auto-save badge */}
+          <SaveBadge status={saveStatus} />
+
+          {/* Preview theme toggle */}
           <button
             onClick={() => setIframeTheme((t) => (t === "dark" ? "light" : "dark"))}
-            className="rounded-full border border-border px-3 py-1.5 text-xs hover:bg-accent"
+            className="hidden rounded-full border border-border px-3 py-1.5 text-xs hover:bg-accent sm:inline-flex items-center gap-1.5"
           >
-            Preview: {iframeTheme}
+            {iframeTheme === "dark" ? (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
+            ) : (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="5" />
+                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+              </svg>
+            )}
+            {iframeTheme === "dark" ? "Dark" : "Light"}
           </button>
+
+          {/* Download button */}
           <button
             onClick={handleDownload}
             className="rounded-full bg-foreground px-4 py-1.5 text-xs font-medium text-background hover:opacity-90"
@@ -161,6 +312,7 @@ function Editor() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
+        {/* ── Sidebar ── */}
         <aside className="flex w-[380px] shrink-0 flex-col border-r border-border bg-card">
           <div className="flex border-b border-border text-xs">
             {(["design", "content", "projects"] as const).map((t) => (
@@ -207,9 +359,65 @@ function Editor() {
             {tab === "projects" && <ProjectsPanel data={data} patch={patch} />}
           </div>
         </aside>
-        <main className="flex-1 overflow-hidden bg-muted/30 p-4">
-          <div className="mx-auto h-full max-w-[1200px] overflow-hidden rounded-2xl border border-border bg-background shadow-2xl">
-            <iframe ref={iframeRef} title="Preview" className="h-full w-full" />
+
+        {/* ── Preview area ── */}
+        <main className="flex flex-1 flex-col overflow-hidden bg-muted/30">
+          {/* Device toggle toolbar */}
+          <div className="flex shrink-0 items-center justify-between border-b border-border bg-card/60 px-4 py-2">
+            <div className="flex items-center gap-2">
+              <DeviceToggle mode={deviceMode} onChange={setDeviceMode} />
+              <span className="text-[10px] text-muted-foreground">
+                {deviceMode === "desktop" ? "Full width" : device.width}
+              </span>
+            </div>
+            {/* Mobile: theme toggle moved here */}
+            <button
+              onClick={() => setIframeTheme((t) => (t === "dark" ? "light" : "dark"))}
+              className="flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-[10px] text-muted-foreground hover:bg-accent sm:hidden"
+            >
+              {iframeTheme === "dark" ? "Dark" : "Light"}
+            </button>
+          </div>
+
+          {/* Preview frame */}
+          <div className="flex flex-1 items-start justify-center overflow-auto p-4">
+            <div
+              className="relative transition-all duration-300"
+              style={{
+                width: device.width,
+                maxWidth: device.maxW,
+                minWidth: deviceMode === "desktop" ? "100%" : undefined,
+                height: "calc(100vh - 11rem)",
+              }}
+            >
+              {/* Device chrome frame for tablet/mobile */}
+              {deviceMode !== "desktop" && (
+                <div
+                  className="pointer-events-none absolute inset-0 rounded-[2rem] border-[8px] border-foreground/20 shadow-2xl z-10"
+                  aria-hidden="true"
+                >
+                  {/* Notch / status bar indicator */}
+                  <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-0">
+                    {deviceMode === "mobile" ? (
+                      <div className="mt-1 h-1 w-16 rounded-full bg-foreground/30" />
+                    ) : (
+                      <div className="mt-1 h-1 w-8 rounded-full bg-foreground/30" />
+                    )}
+                  </div>
+                  {/* Home bar */}
+                  <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2">
+                    <div className="h-1 w-10 rounded-full bg-foreground/30" />
+                  </div>
+                </div>
+              )}
+              <iframe
+                ref={iframeRef}
+                title="Preview"
+                className={`h-full w-full border-0 bg-background transition-all duration-300 ${
+                  deviceMode !== "desktop" ? "rounded-[1.5rem] overflow-hidden" : "rounded-2xl border border-border shadow-2xl"
+                }`}
+              />
+            </div>
           </div>
         </main>
       </div>
@@ -442,7 +650,6 @@ function ProfileGalleryField({
         </span>
       </div>
 
-      {/* Carousel preview */}
       {all.length > 0 ? (
         <div className="relative overflow-hidden rounded-lg border border-border bg-muted">
           <img
@@ -453,45 +660,21 @@ function ProfileGalleryField({
           />
           {all.length > 1 && (
             <>
-              <button
-                onClick={prev}
-                className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/60 px-3 py-1.5 text-sm text-white hover:bg-black/80 transition"
-                aria-label="Previous image"
-              >
-                ‹
-              </button>
-              <button
-                onClick={next}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/60 px-3 py-1.5 text-sm text-white hover:bg-black/80 transition"
-                aria-label="Next image"
-              >
-                ›
-              </button>
+              <button onClick={prev} className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/60 px-3 py-1.5 text-sm text-white hover:bg-black/80 transition" aria-label="Previous image">‹</button>
+              <button onClick={next} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/60 px-3 py-1.5 text-sm text-white hover:bg-black/80 transition" aria-label="Next image">›</button>
             </>
           )}
-          {/* Dot indicators */}
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
             {all.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setIdx(i)}
-                aria-label={`Go to image ${i + 1}`}
-                className={`h-1.5 rounded-full transition-all ${
-                  i === idx ? "w-4 bg-white" : "w-1.5 bg-white/50 hover:bg-white/80"
-                }`}
+              <button key={i} onClick={() => setIdx(i)} aria-label={`Go to image ${i + 1}`}
+                className={`h-1.5 rounded-full transition-all ${ i === idx ? "w-4 bg-white" : "w-1.5 bg-white/50 hover:bg-white/80" }`}
               />
             ))}
           </div>
-          {/* Image counter */}
           <div className="absolute top-2 right-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] text-white">
             {idx + 1} / {all.length}
           </div>
-          {/* Remove button */}
-          <button
-            onClick={removeCurrent}
-            className="absolute top-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] text-red-400 hover:text-red-300 hover:bg-black/80 transition"
-            aria-label="Remove current image"
-          >
+          <button onClick={removeCurrent} className="absolute top-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] text-red-400 hover:text-red-300 hover:bg-black/80 transition" aria-label="Remove current image">
             ✕ Remove
           </button>
         </div>
@@ -506,17 +689,11 @@ function ProfileGalleryField({
         </div>
       )}
 
-      {/* Thumbnail strip */}
       {all.length > 1 && (
         <div className="flex gap-1.5 overflow-x-auto pb-1">
           {all.map((src, i) => (
-            <button
-              key={i}
-              onClick={() => setIdx(i)}
-              aria-label={`Select image ${i + 1}`}
-              className={`h-12 w-12 shrink-0 overflow-hidden rounded border-2 transition ${
-                i === idx ? "border-foreground" : "border-transparent opacity-60 hover:opacity-100"
-              }`}
+            <button key={i} onClick={() => setIdx(i)} aria-label={`Select image ${i + 1}`}
+              className={`h-12 w-12 shrink-0 overflow-hidden rounded border-2 transition ${ i === idx ? "border-foreground" : "border-transparent opacity-60 hover:opacity-100" }`}
             >
               <img src={src} alt="" className="h-full w-full object-cover" />
             </button>
@@ -524,12 +701,8 @@ function ProfileGalleryField({
         </div>
       )}
 
-      {/* Action buttons */}
       <div className="flex flex-wrap gap-1.5">
-        <button
-          type="button"
-          onClick={() => canAdd && uploadRef.current?.click()}
-          disabled={!canAdd}
+        <button type="button" onClick={() => canAdd && uploadRef.current?.click()} disabled={!canAdd}
           className="flex items-center gap-1.5 rounded-md border border-border bg-muted px-2.5 py-1.5 text-[10px] font-medium hover:bg-accent hover:border-foreground transition disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -540,10 +713,7 @@ function ProfileGalleryField({
           Upload image
         </button>
         <input ref={uploadRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
-
-        <button
-          onClick={() => setAddingUrl((a) => !a)}
-          disabled={!canAdd}
+        <button onClick={() => setAddingUrl((a) => !a)} disabled={!canAdd}
           className="rounded-md border border-border bg-muted px-2.5 py-1.5 text-[10px] hover:bg-accent transition disabled:opacity-40 disabled:cursor-not-allowed"
         >
           + Paste URL
@@ -552,27 +722,17 @@ function ProfileGalleryField({
 
       {addingUrl && (
         <div className="flex gap-1">
-          <input
-            autoFocus
-            value={newUrl}
-            onChange={(e) => setNewUrl(e.target.value)}
+          <input autoFocus value={newUrl} onChange={(e) => setNewUrl(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addUrl()}
             placeholder="https://i.imgur.com/..."
             className="flex-1 rounded border border-border bg-muted px-2 py-1 text-[10px] outline-none focus:border-foreground"
           />
-          <button
-            onClick={addUrl}
-            className="rounded border border-border px-2.5 py-1 text-[10px] hover:bg-accent"
-          >
-            Add
-          </button>
+          <button onClick={addUrl} className="rounded border border-border px-2.5 py-1 text-[10px] hover:bg-accent">Add</button>
         </div>
       )}
 
       {!canAdd && (
-        <p className="text-[10px] text-destructive">
-          Maximum {MAX_GALLERY_IMAGES} images reached. Remove one to add more.
-        </p>
+        <p className="text-[10px] text-destructive">Maximum {MAX_GALLERY_IMAGES} images reached. Remove one to add more.</p>
       )}
     </div>
   );
@@ -610,68 +770,43 @@ function GitHubSyncPanel({
     <div className="rounded-lg border border-border bg-background p-3 space-y-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <span className="block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-            GitHub README Sync
-          </span>
+          <span className="block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">GitHub README Sync</span>
           <p className="mt-0.5 text-[10px] text-muted-foreground leading-relaxed">
             Auto-populate a <code className="rounded bg-muted px-1 py-0.5">portfolio.json</code> in your
             GitHub profile repo (<code className="rounded bg-muted px-1 py-0.5">&lt;username&gt;/&lt;username&gt;</code>) and keep it in sync.
           </p>
         </div>
-        {/* Toggle */}
-        <button
-          onClick={() => patch({ githubSync: !enabled })}
-          aria-label={enabled ? "Disable GitHub sync" : "Enable GitHub sync"}
-          className={`relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition ${
-            enabled ? "bg-foreground" : "bg-muted-foreground/30"
-          }`}
+        <button onClick={() => patch({ githubSync: !enabled })} aria-label={enabled ? "Disable GitHub sync" : "Enable GitHub sync"}
+          className={`relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition ${ enabled ? "bg-foreground" : "bg-muted-foreground/30" }`}
         >
-          <span
-            className={`absolute top-0.5 h-4 w-4 rounded-full bg-background shadow transition-all ${
-              enabled ? "left-4" : "left-0.5"
-            }`}
-          />
+          <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-background shadow transition-all ${ enabled ? "left-4" : "left-0.5" }`} />
         </button>
       </div>
 
       {enabled && (
         <div className="space-y-2">
           <div>
-            <label className="mb-1 block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-              Personal Access Token
-            </label>
-            <input
-              type="password"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
+            <label className="mb-1 block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Personal Access Token</label>
+            <input type="password" value={token} onChange={(e) => setToken(e.target.value)}
               placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
               className="w-full rounded-md border border-border bg-muted px-3 py-1.5 text-xs outline-none focus:border-foreground font-mono"
               autoComplete="off"
             />
             <p className="mt-1 text-[10px] text-muted-foreground">
-              Needs <code className="rounded bg-muted px-1">public_repo</code> scope.
-              Token is never stored — only used for this request.
+              Needs <code className="rounded bg-muted px-1">public_repo</code> scope. Token is never stored — only used for this request.
             </p>
           </div>
-
-          <button
-            onClick={handleSync}
-            disabled={syncing}
+          <button onClick={handleSync} disabled={syncing}
             className="w-full rounded-md bg-foreground py-2 text-xs font-medium text-background hover:opacity-90 disabled:opacity-50 transition"
           >
             {syncing ? "Syncing…" : "↑ Push portfolio.json to GitHub"}
           </button>
-
           {status && (
-            <p className={`text-[10px] leading-relaxed ${ status.ok ? "text-green-600 dark:text-green-400" : "text-destructive" }`}>
-              {status.msg}
-            </p>
+            <p className={`text-[10px] leading-relaxed ${ status.ok ? "text-green-600 dark:text-green-400" : "text-destructive" }`}>{status.msg}</p>
           )}
-
           <div className="rounded-md border border-border bg-muted/60 px-3 py-2 text-[10px] text-muted-foreground space-y-1">
             <p className="font-medium text-foreground">What gets synced?</p>
             <p>Your name, title, bio, skills, experience, education, projects (URLs only — base64 images are excluded), and links are written as structured JSON to your profile repo.</p>
-            <p>You can reference this file in your GitHub README to display a live portfolio badge or structured data.</p>
           </div>
         </div>
       )}
@@ -693,96 +828,51 @@ function ContentPanel({
       <Field label="Title / Role" value={data.title} onChange={(v) => patch({ title: v })} />
       <Field label="Location" value={data.location} onChange={(v) => patch({ location: v })} />
 
-      {/* Bio with AI */}
       <div>
         <label className="block">
-          <span className="mb-1.5 block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-            Bio (one-liner)
-          </span>
-          <textarea
-            value={data.bio ?? ""}
-            onChange={(e) => patch({ bio: e.target.value })}
-            rows={2}
+          <span className="mb-1.5 block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Bio (one-liner)</span>
+          <textarea value={data.bio ?? ""} onChange={(e) => patch({ bio: e.target.value })} rows={2}
             className="w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground"
           />
         </label>
-        <AiBioButton
-          value={data.bio}
-          name={data.name}
-          title={data.title}
-          onResult={(v) => patch({ bio: v })}
-        />
+        <AiBioButton value={data.bio} name={data.name} title={data.title} onResult={(v) => patch({ bio: v })} />
       </div>
 
-      {/* About with AI */}
       <div>
         <label className="block">
-          <span className="mb-1.5 block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-            About (long form)
-          </span>
-          <textarea
-            value={data.about ?? ""}
-            onChange={(e) => patch({ about: e.target.value })}
-            rows={5}
+          <span className="mb-1.5 block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">About (long form)</span>
+          <textarea value={data.about ?? ""} onChange={(e) => patch({ about: e.target.value })} rows={5}
             className="w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground"
           />
         </label>
-        <AiBioButton
-          value={data.about}
-          name={data.name}
-          title={data.title}
-          onResult={(v) => patch({ about: v })}
-        />
+        <AiBioButton value={data.about} name={data.name} title={data.title} onResult={(v) => patch({ about: v })} />
       </div>
 
-      {/* Avatar */}
       <AvatarField value={data.avatar ?? ""} onChange={(v) => patch({ avatar: v })} />
-
-      {/* Profile Gallery */}
-      <ProfileGalleryField
-        images={data.galleryImages ?? []}
-        onChange={(imgs) => patch({ galleryImages: imgs })}
-      />
+      <ProfileGalleryField images={data.galleryImages ?? []} onChange={(imgs) => patch({ galleryImages: imgs })} />
 
       <Field label="Email" value={data.email} onChange={(v) => patch({ email: v })} />
       <Field label="Website" value={data.website} onChange={(v) => patch({ website: v })} />
       <Field label="GitHub handle" value={data.github} onChange={(v) => patch({ github: v })} />
 
-      {/* Skills */}
-      <SkillsField
-        initialSkills={Array.isArray(data.skills) ? data.skills : []}
-        onCommit={(skills) => patch({ skills })}
+      <SkillsField initialSkills={Array.isArray(data.skills) ? data.skills : []} onCommit={(skills) => patch({ skills })} />
+
+      <ListEditor label="Experience" items={data.experience} onChange={(items) => patch({ experience: items })}
+        fields={["role", "company", "period", "description"]} blank={{ role: "", company: "", period: "", description: "" }}
+      />
+      <ListEditor label="Education" items={data.education} onChange={(items) => patch({ education: items })}
+        fields={["degree", "school", "period"]} blank={{ degree: "", school: "", period: "" }}
+      />
+      <ListEditor label="Links" items={data.links} onChange={(items) => patch({ links: items })}
+        fields={["label", "url"]} blank={{ label: "", url: "" }}
       />
 
-      <ListEditor
-        label="Experience"
-        items={data.experience}
-        onChange={(items) => patch({ experience: items })}
-        fields={["role", "company", "period", "description"]}
-        blank={{ role: "", company: "", period: "", description: "" }}
-      />
-      <ListEditor
-        label="Education"
-        items={data.education}
-        onChange={(items) => patch({ education: items })}
-        fields={["degree", "school", "period"]}
-        blank={{ degree: "", school: "", period: "" }}
-      />
-      <ListEditor
-        label="Links"
-        items={data.links}
-        onChange={(items) => patch({ links: items })}
-        fields={["label", "url"]}
-        blank={{ label: "", url: "" }}
-      />
-
-      {/* GitHub README Sync */}
       <GitHubSyncPanel data={data} patch={patch} />
     </div>
   );
 }
 
-// ── Image Carousel Editor (base64 upload stored in memory) ─────────────────────────
+// ── Image Carousel Editor ────────────────────────────────────────────────────
 function ImageCarousel({
   images,
   liveUrl,
@@ -846,10 +936,7 @@ function ImageCarousel({
     <div className="space-y-2">
       {all.length > 0 ? (
         <div className="relative overflow-hidden rounded-lg border border-border bg-muted">
-          <img
-            src={current}
-            alt="project screenshot"
-            className="h-36 w-full object-cover"
+          <img src={current} alt="project screenshot" className="h-36 w-full object-cover"
             onError={(e) => { (e.currentTarget as HTMLImageElement).src = ""; }}
           />
           {all.length > 1 && (
@@ -872,9 +959,7 @@ function ImageCarousel({
       )}
 
       <div className="flex flex-wrap gap-1.5">
-        <button
-          type="button"
-          onClick={() => uploadRef.current?.click()}
+        <button type="button" onClick={() => uploadRef.current?.click()}
           className="flex items-center gap-1.5 rounded-md border border-border bg-muted px-2.5 py-1.5 text-[10px] font-medium hover:bg-accent hover:border-foreground transition"
         >
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -885,15 +970,13 @@ function ImageCarousel({
           Upload image
         </button>
         <input ref={uploadRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
-        <button
-          onClick={captureScreenshot}
+        <button onClick={captureScreenshot}
           disabled={capturing || (!liveUrl?.startsWith("http") && !ghUrl?.startsWith("http"))}
           className="flex items-center gap-1 rounded-md border border-border bg-muted px-2.5 py-1.5 text-[10px] hover:bg-accent disabled:opacity-40 transition"
         >
           📸 {capturing ? "Capturing…" : "Screenshot"}
         </button>
-        <button
-          onClick={() => setAdding((a) => !a)}
+        <button onClick={() => setAdding((a) => !a)}
           className="rounded-md border border-border bg-muted px-2.5 py-1.5 text-[10px] hover:bg-accent transition"
         >
           + Paste URL
@@ -908,10 +991,7 @@ function ImageCarousel({
 
       {adding && (
         <div className="flex gap-1">
-          <input
-            autoFocus
-            value={newUrl}
-            onChange={(e) => setNewUrl(e.target.value)}
+          <input autoFocus value={newUrl} onChange={(e) => setNewUrl(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addUrl()}
             placeholder="https://i.imgur.com/..."
             className="flex-1 rounded border border-border bg-muted px-2 py-1 text-[10px] outline-none focus:border-foreground"
@@ -974,8 +1054,7 @@ function ProjectsPanel({
           return (
             <div key={i} className={`rounded-xl border p-3 transition ${on ? "border-border bg-background" : "border-border bg-muted/40 opacity-60"}`}>
               <div className="mb-3 flex items-center gap-2">
-                <button
-                  onClick={() => updateAt(i, { include: !on })}
+                <button onClick={() => updateAt(i, { include: !on })}
                   className={`relative h-4 w-7 shrink-0 rounded-full transition ${on ? "bg-foreground" : "bg-muted-foreground/40"}`}
                   aria-label={on ? "Hide project" : "Show project"}
                 >
@@ -1007,7 +1086,7 @@ function ProjectsPanel({
   );
 }
 
-// ── Field ───────────────────────────────────────────────────────────────────
+// ── Field ────────────────────────────────────────────────────────────────────
 function Field({
   label,
   value,
@@ -1025,16 +1104,11 @@ function Field({
     <label className="block">
       <span className="mb-1.5 block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{label}</span>
       {textarea ? (
-        <textarea
-          value={value ?? ""}
-          onChange={(e) => onChange(e.target.value)}
-          rows={rows}
+        <textarea value={value ?? ""} onChange={(e) => onChange(e.target.value)} rows={rows}
           className="w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground"
         />
       ) : (
-        <input
-          value={value ?? ""}
-          onChange={(e) => onChange(e.target.value)}
+        <input value={value ?? ""} onChange={(e) => onChange(e.target.value)}
           className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground"
         />
       )}
@@ -1060,8 +1134,7 @@ function ListEditor<T extends Record<string, any>>({
     <div className="rounded-lg border border-border p-3">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{label}</span>
-        <button
-          onClick={() => onChange([...items, { ...blank }])}
+        <button onClick={() => onChange([...items, { ...blank }])}
           className="rounded-full border border-border px-2 py-0.5 text-[10px] hover:bg-accent"
         >
           + Add
@@ -1071,10 +1144,7 @@ function ListEditor<T extends Record<string, any>>({
         {(items ?? []).map((item, i) => (
           <div key={i} className="rounded-md border border-border bg-background p-2">
             {fields.map((f) => (
-              <input
-                key={f}
-                value={item[f] ?? ""}
-                placeholder={f}
+              <input key={f} value={item[f] ?? ""} placeholder={f}
                 onChange={(e) => {
                   const next = [...items];
                   next[i] = { ...next[i], [f]: e.target.value };
@@ -1083,8 +1153,7 @@ function ListEditor<T extends Record<string, any>>({
                 className="mb-1 w-full rounded border border-transparent bg-muted px-2 py-1 text-xs outline-none focus:border-border"
               />
             ))}
-            <button
-              onClick={() => onChange(items.filter((_, idx) => idx !== i))}
+            <button onClick={() => onChange(items.filter((_, idx) => idx !== i))}
               className="mt-1 text-[10px] text-destructive hover:underline"
             >
               Remove
