@@ -264,13 +264,13 @@ function Landing() {
           ))}
         </div>
 
-        {/* Peerlist badge — constrained so it never overflows */}
+        {/* Peerlist badge */}
         <div className="m-fade mt-10 flex justify-center w-full overflow-hidden">
           <a href="https://peerlist.io/vineetjassal/project/foliocv--resume-to-portfolio-in-seconds" target="_blank" rel="noopener noreferrer"
             className="max-w-full">
             <img src="https://peerlist.io/api/v1/projects/embed/PRJHMQ6BELPRQNGBLHJBAEQMQPENEL?showUpvote=true&theme=dark"
               alt="FolioCV on Peerlist Launchpad"
-              style={{ width: "auto", height: "48px", maxWidth: "100%" }} />
+              style={{ width: "auto", height: "64px", maxWidth: "100%" }} />
           </a>
         </div>
       </main>
