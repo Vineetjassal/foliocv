@@ -2,9 +2,12 @@
 
 > Turn your résumé into a portfolio — in seconds.
 
-**FolioCV** is a fully browser-based portfolio generator. Drop a résumé JSON, paste your GitHub username, and get a beautiful, editable portfolio site you can download as clean HTML/CSS/JS. No signup, no server, no lock-in.
+[![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
+[![Open Source](https://img.shields.io/badge/Open%20Source-%F0%9F%9F%A2-brightgreen)](https://github.com/Vineetjassal/foliocv)
+[![Built with React](https://img.shields.io/badge/built%20with-React%2019-61dafb?logo=react)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)](https://www.typescriptlang.org/)
 
-[![Deploy to Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/vineetjassal/skill-builder-express)
+**FolioCV** is a fully browser-based, open source portfolio generator. Drop a résumé JSON, paste your GitHub username, and get a beautiful, editable portfolio site you can download as clean HTML/CSS/JS. No signup, no server, no lock-in.
 
 ---
 
@@ -12,11 +15,12 @@
 
 - **100% private** — everything runs in your browser, nothing is sent to a server
 - **JSON Resume compatible** — supports the [jsonresume.org](https://jsonresume.org) schema out of the box
-- **Live site screenshots** — project cards show real screenshots of your deployed sites, not GitHub social previews
+- **Live site screenshots** — project cards show real screenshots of your deployed sites
 - **Inline editor** — tweak every field, toggle projects, rearrange sections in a live WYSIWYG editor
-- **3 minimal templates** — Quiet (centered), Studio (sidebar), Editorial (bold serif)
-- **Dark mode native** — every generated portfolio ships with a light/dark toggle
+- **4 clean templates** — Ink (editorial), Sheet (sidebar), Mono (timeline), Ruled (minimal)
+- **Teal + white design** — every generated portfolio ships with a light/dark toggle
 - **Download clean code** — get a zip of HTML + CSS you own outright
+- **Open Source & MIT licensed** — fork it, self-host it, contribute to it
 
 ---
 
@@ -31,8 +35,8 @@
 
 ```bash
 # Clone the repo
-git clone https://github.com/vineetjassal/skill-builder-express.git
-cd skill-builder-express
+git clone https://github.com/Vineetjassal/foliocv.git
+cd foliocv
 
 # Install dependencies
 npm install
@@ -56,13 +60,13 @@ Output will be in the `.output/` directory.
 ## 🗂 Project Structure
 
 ```
-skill-builder-express/
+foliocv/
 ├── src/
 │   ├── routes/          # TanStack Router file-based routes
 │   │   ├── index.tsx    # Landing page
 │   │   ├── create.tsx   # Step 1 — upload JSON + GitHub
 │   │   └── edit.tsx     # Step 2 — inline editor + preview
-│   ├── components/      # Shared UI components (Logo, etc.)
+│   ├── components/      # Shared UI components
 │   ├── lib/
 │   │   ├── github.ts    # GitHub API fetching + screenshot URLs
 │   │   ├── parseJson.ts # JSON Resume parser
@@ -71,6 +75,7 @@ skill-builder-express/
 │   │   └── types.ts     # TypeScript types
 │   └── styles.css       # Global Tailwind styles
 ├── public/              # Static assets
+├── LICENSE              # MIT License
 ├── vercel.json          # Vercel deployment config
 └── vite.config.ts       # Vite + TanStack Start config
 ```
@@ -94,13 +99,15 @@ skill-builder-express/
 
 ## 🤝 Contributing
 
-Pull requests are welcome! For major changes, please open an issue first.
+Contributions are welcome! FolioCV is open source and built in the open.
 
 1. Fork the repo
 2. Create your feature branch: `git checkout -b feat/my-feature`
 3. Commit your changes: `git commit -m 'feat: add my feature'`
 4. Push to the branch: `git push origin feat/my-feature`
 5. Open a Pull Request
+
+For major changes, please open an issue first to discuss what you'd like to change.
 
 ---
 
@@ -112,4 +119,4 @@ Pull requests are welcome! For major changes, please open an issue first.
 
 ## 📄 License
 
-MIT — do whatever you want with it.
+[MIT](./LICENSE) — free to use, modify, and distribute. See the [LICENSE](./LICENSE) file for full details.
