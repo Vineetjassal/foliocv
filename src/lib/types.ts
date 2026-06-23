@@ -1,4 +1,4 @@
-export type TemplateId = "centered" | "split" | "editorial" | "aurora" | "minimal";
+export type TemplateId = "centered" | "split" | "editorial" | "minimal";
 
 export type FontFamily =
   | "inter"

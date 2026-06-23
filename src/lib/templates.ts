@@ -196,7 +196,7 @@ function buildNav(name: string): string {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 1. INK  — newspaper-style editorial, bold serif masthead, ruled columns
+// 1. INK  — newspaper-style editorial, bold serif masthead
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function buildInk(data: PortfolioData): { html: string; css: string } {
   const gallery = data.galleryImages?.length ? gallerySection(data.galleryImages) : "";
@@ -236,7 +236,6 @@ ${buildNav(data.name)}
     </div>
 
     ${gallery}
-
     <div class="ink-rule"></div>
 
     <div class="ink-columns" id="project">
@@ -264,12 +263,7 @@ ${themeToggle}
 .ink-card{padding:2.5rem 2.5rem 3rem;}
 .ink-masthead{text-align:center;padding-bottom:1.5rem;margin-bottom:1.5rem;border-bottom:2px solid var(--card-border);}
 .ink-dateline{font-size:.65rem;letter-spacing:.2em;text-transform:uppercase;color:var(--text-faint);margin-bottom:.75rem;}
-.ink-nameplate{
-  font-family:'Playfair Display',Georgia,serif;
-  font-size:clamp(3rem,9vw,7.5rem);font-weight:900;
-  line-height:.92;letter-spacing:-.03em;
-  margin-bottom:1rem;color:var(--teal);
-}
+.ink-nameplate{font-family:'Playfair Display',Georgia,serif;font-size:clamp(3rem,9vw,7.5rem);font-weight:900;line-height:.92;letter-spacing:-.03em;margin-bottom:1rem;color:var(--teal);}
 .ink-rule{border:none;border-top:2px solid var(--card-border);margin:.6rem 0;}
 .ink-subhead{font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--text-muted);margin-top:.5rem;}
 .ink-lead-row{display:grid;grid-template-columns:1fr 200px;gap:2.5rem;margin-bottom:2rem;align-items:start;}
@@ -308,7 +302,6 @@ ${buildNav(data.name)}
 
 <div class="sh-outer" id="home">
   <div class="fc-card sh-layout">
-    <!-- Left sidebar -->
     <aside class="sh-aside" id="about">
       ${data.avatar ? `<img src="${esc(data.avatar)}" alt="${esc(data.name)}" class="sh-av" />` : ""}
       <h1 class="sh-name">${esc(data.name)}</h1>
@@ -322,8 +315,6 @@ ${buildNav(data.name)}
         <div class="sh-badges">${skillBadges(data.skills)}</div>
       </div>` : ""}
     </aside>
-
-    <!-- Right content -->
     <main class="sh-main" id="project">
       ${gallery}
       ${data.about ? `
@@ -357,11 +348,7 @@ ${themeToggle}
 .sh-outer{padding:2rem;max-width:1100px;margin:0 auto;}
 .sh-layout{display:grid;grid-template-columns:260px 1fr;gap:0;padding:0;overflow:hidden;}
 @media(max-width:720px){.sh-layout{grid-template-columns:1fr;}}
-.sh-aside{
-  padding:2.5rem 2rem;border-right:1.5px solid var(--card-border);
-  display:flex;flex-direction:column;gap:.6rem;
-  background:var(--bg2);border-radius:1.5rem 0 0 1.5rem;
-}
+.sh-aside{padding:2.5rem 2rem;border-right:1.5px solid var(--card-border);display:flex;flex-direction:column;gap:.6rem;background:var(--bg2);border-radius:1.5rem 0 0 1.5rem;}
 @media(max-width:720px){.sh-aside{border-right:none;border-bottom:1.5px solid var(--card-border);border-radius:1.5rem 1.5rem 0 0;}}
 .sh-av{width:64px;height:64px;border-radius:50%;object-fit:cover;margin-bottom:.5rem;border:2px solid var(--teal);}
 .sh-name{font-size:1.35rem;font-weight:700;letter-spacing:-.03em;line-height:1.15;margin-bottom:.15rem;color:var(--teal);}
@@ -411,35 +398,28 @@ ${buildNav(data.name)}
       ${data.bio ? `<p class="mo-bio">${esc(data.bio)}</p>` : ""}
       <div class="mo-links">${socialLinks(data)}</div>
     </header>
-
     <div class="mo-divider"></div>
-
     ${gallery}
-
     ${data.about ? `
     <section class="mo-sec">
       <h2 class="sec-label">About</h2>
       <p class="mo-text">${esc(data.about)}</p>
     </section>` : ""}
-
     ${data.skills?.length ? `
     <section class="mo-sec">
       <h2 class="sec-label">Skills</h2>
       <div class="mo-badges">${skillBadges(data.skills)}</div>
     </section>` : ""}
-
     ${data.experience?.length ? `
     <section class="mo-sec">
       <h2 class="sec-label">Experience</h2>
       <div class="mo-timeline">${expItems(data)}</div>
     </section>` : ""}
-
     ${data.education?.length ? `
     <section class="mo-sec">
       <h2 class="sec-label">Education</h2>
       ${eduItems(data)}
     </section>` : ""}
-
     ${data.projects?.filter(p => p.include !== false).length ? `
     <section class="mo-sec" id="project">
       <h2 class="sec-label">Projects</h2>
@@ -477,101 +457,7 @@ ${themeToggle}
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 4. FOLIO  — clean card-based layout (replaces aurora)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function buildFolio(data: PortfolioData): { html: string; css: string } {
-  const gallery = data.galleryImages?.length ? gallerySection(data.galleryImages) : "";
-  const html = `<!DOCTYPE html>
-<html lang="en" data-theme="light">
-<head>
-<meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>${esc(data.name)} — Portfolio</title>
-<meta name="description" content="${esc(data.bio || data.about || data.name + "'s portfolio")}" />
-<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@300;400;600&display=swap" rel="stylesheet">
-</head>
-<body class="fo-body">
-
-${buildNav(data.name)}
-
-<div class="fo-outer" id="home">
-  <div class="fc-card fo-hero-card">
-    <div class="fo-hero-inner" id="about">
-      <div class="fo-hero-left">
-        <h1 class="fo-name">${esc(data.name)}</h1>
-        ${data.title ? `<div class="fo-role">${esc(data.title)}</div>` : ""}
-        ${data.location ? `<div class="fo-loc">${esc(data.location)}</div>` : ""}
-        ${data.bio ? `<p class="fo-bio">${esc(data.bio)}</p>` : ""}
-        <div class="fo-links">${socialLinks(data)}</div>
-      </div>
-      ${data.avatar ? `<img src="${esc(data.avatar)}" alt="${esc(data.name)}" class="fo-av" />` : ""}
-    </div>
-  </div>
-
-  ${gallery}
-
-  <div class="fo-grid">
-    ${data.about ? `
-    <div class="fc-card fo-sec-card fo-wide">
-      <h2 class="sec-label">About</h2>
-      <p class="fo-text">${esc(data.about)}</p>
-    </div>` : ""}
-
-    ${data.skills?.length ? `
-    <div class="fc-card fo-sec-card">
-      <h2 class="sec-label">Skills</h2>
-      <div class="fo-badges">${skillBadges(data.skills)}</div>
-    </div>` : ""}
-
-    ${data.education?.length ? `
-    <div class="fc-card fo-sec-card">
-      <h2 class="sec-label">Education</h2>
-      ${eduItems(data)}
-    </div>` : ""}
-
-    ${data.experience?.length ? `
-    <div class="fc-card fo-sec-card fo-wide">
-      <h2 class="sec-label">Experience</h2>
-      ${expItems(data)}
-    </div>` : ""}
-
-    ${data.projects?.filter(p => p.include !== false).length ? `
-    <div class="fc-card fo-sec-card fo-wide" id="project">
-      <h2 class="sec-label">Projects</h2>
-      <div class="fo-pgrid">${projectCards(data)}</div>
-    </div>` : ""}
-  </div>
-</div>
-${themeToggle}
-</body></html>`;
-
-  const css = tealsBase + `
-.fo-body{font-family:'Source Sans 3',sans-serif;}
-.fo-outer{padding:2rem;max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:1.5rem;}
-.fo-hero-card{padding:2.5rem;}
-.fo-hero-inner{display:flex;align-items:flex-start;justify-content:space-between;gap:2rem;}
-@media(max-width:600px){.fo-hero-inner{flex-direction:column-reverse;}}
-.fo-hero-left{flex:1;}
-.fo-name{font-family:'Lora',Georgia,serif;font-size:clamp(2rem,5vw,3.2rem);font-weight:700;letter-spacing:-.03em;line-height:1.1;margin-bottom:.25rem;color:var(--teal);}
-.fo-role{font-size:.78rem;text-transform:uppercase;letter-spacing:.16em;color:var(--text-faint);margin-bottom:.15rem;}
-.fo-loc{font-size:.76rem;color:var(--text-faint);margin-bottom:.85rem;}
-.fo-bio{font-size:.95rem;line-height:1.75;color:var(--text-muted);max-width:52ch;margin-bottom:1rem;}
-.fo-links{display:flex;flex-wrap:wrap;gap:.4rem .9rem;}
-.fo-links a{font-size:.78rem;color:var(--teal);border-bottom:1px solid var(--line);padding-bottom:1px;transition:border-color .2s;}
-.fo-links a:hover{border-color:var(--teal);text-decoration:none;}
-.fo-av{width:100px;height:125px;object-fit:cover;border-radius:1rem;border:2px solid var(--teal);flex-shrink:0;}
-.fo-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;}
-@media(max-width:680px){.fo-grid{grid-template-columns:1fr;}}
-.fo-sec-card{padding:1.75rem;}
-.fo-wide{grid-column:1 / -1;}
-.fo-text{font-family:'Lora',Georgia,serif;font-size:.92rem;line-height:1.82;color:var(--text-muted);max-width:68ch;}
-.fo-badges{display:flex;flex-wrap:wrap;gap:.2rem;}
-.fo-pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem;margin-top:.5rem;}
-`;
-  return { html, css };
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 5. RULED  — brutalist horizontal-line structure, full-width sections
+// 4. RULED  — brutalist horizontal-line structure, full-width sections
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function buildRuled(data: PortfolioData): { html: string; css: string } {
   const gallery = data.galleryImages?.length ? gallerySection(data.galleryImages) : "";
@@ -597,7 +483,6 @@ ${buildNav(data.name)}
         ${data.avatar ? `<img src="${esc(data.avatar)}" alt="${esc(data.name)}" class="rl-av" />` : ""}
       </div>
     </div>
-
     ${data.bio || data.location ? `
     <div class="rl-row rl-intro-row" id="about">
       <div class="rl-row-label">intro</div>
@@ -607,43 +492,31 @@ ${buildNav(data.name)}
       </div>
       <div class="rl-row-links">${socialLinks(data)}</div>
     </div>` : ""}
-
     ${gallery}
-
     ${data.about ? `
     <div class="rl-row">
       <div class="rl-row-label">about</div>
-      <div class="rl-row-content rl-wide">
-        <p class="rl-text">${esc(data.about)}</p>
-      </div>
+      <div class="rl-row-content rl-wide"><p class="rl-text">${esc(data.about)}</p></div>
     </div>` : ""}
-
     ${data.skills?.length ? `
     <div class="rl-row">
       <div class="rl-row-label">skills</div>
-      <div class="rl-row-content rl-wide">
-        <div class="rl-badges">${skillBadges(data.skills)}</div>
-      </div>
+      <div class="rl-row-content rl-wide"><div class="rl-badges">${skillBadges(data.skills)}</div></div>
     </div>` : ""}
-
     ${data.experience?.length ? `
     <div class="rl-row">
       <div class="rl-row-label">work</div>
       <div class="rl-row-content rl-wide">${expItems(data)}</div>
     </div>` : ""}
-
     ${data.education?.length ? `
     <div class="rl-row">
       <div class="rl-row-label">edu</div>
       <div class="rl-row-content rl-wide">${eduItems(data)}</div>
     </div>` : ""}
-
     ${data.projects?.filter(p => p.include !== false).length ? `
     <div class="rl-row" id="project">
       <div class="rl-row-label">projects</div>
-      <div class="rl-row-content rl-wide">
-        <div class="rl-pgrid">${projectCards(data)}</div>
-      </div>
+      <div class="rl-row-content rl-wide"><div class="rl-pgrid">${projectCards(data)}</div></div>
     </div>` : ""}
   </div>
 </div>
@@ -654,26 +527,15 @@ ${themeToggle}
 .rl-body{font-family:'Space Grotesk',sans-serif;}
 .rl-outer{padding:2rem;max-width:1100px;margin:0 auto;}
 .rl-card{padding:2.5rem 2.5rem 3rem;overflow:hidden;}
-.rl-header-inner{
-  display:flex;align-items:center;gap:1.5rem;
-  border-bottom:2px solid var(--card-border);padding-bottom:1.5rem;margin-bottom:0;
-}
+.rl-header-inner{display:flex;align-items:center;gap:1.5rem;border-bottom:2px solid var(--card-border);padding-bottom:1.5rem;margin-bottom:0;}
 .rl-index{font-family:'Space Mono',monospace;font-size:.65rem;letter-spacing:.18em;color:var(--teal-mid);writing-mode:vertical-lr;transform:rotate(180deg);flex-shrink:0;}
 .rl-name{font-size:clamp(2rem,5vw,4rem);font-weight:700;letter-spacing:-.04em;line-height:1;flex:1;color:var(--teal);}
 .rl-header-right{display:flex;align-items:center;gap:1rem;flex-shrink:0;}
 .rl-role{font-size:.72rem;text-transform:uppercase;letter-spacing:.15em;color:var(--text-faint);max-width:15ch;text-align:right;}
 .rl-av{width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid var(--teal);}
-.rl-row{
-  display:grid;
-  grid-template-columns:80px 1fr auto;
-  border-bottom:1px solid var(--line);
-  padding:1.75rem 0;
-  gap:1.5rem;
-  align-items:start;
-}
+.rl-row{display:grid;grid-template-columns:80px 1fr auto;border-bottom:1px solid var(--line);padding:1.75rem 0;gap:1.5rem;align-items:start;}
 @media(max-width:680px){.rl-row{grid-template-columns:1fr;}}
 .rl-row-label{font-family:'Space Mono',monospace;font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);padding-top:.1rem;}
-.rl-row-content{}
 .rl-wide{grid-column:2 / 4;}
 @media(max-width:680px){.rl-wide{grid-column:auto;}}
 .rl-bio{font-size:.92rem;line-height:1.72;color:var(--text-muted);max-width:55ch;}
@@ -692,7 +554,6 @@ ${themeToggle}
 export function buildSite(data: PortfolioData, template: TemplateId): { html: string; css: string } {
   if (template === "split")     return buildSheet(data);   // Sheet — Swiss sidebar grid
   if (template === "editorial") return buildMono(data);    // Mono  — centred timeline
-  if (template === "aurora")    return buildFolio(data);   // Folio — card grid (replaces aurora)
   if (template === "minimal")   return buildRuled(data);   // Ruled — horizontal rows
-  return buildInk(data);                                    // Ink   — newspaper masthead
+  return buildInk(data);                                    // Ink   — newspaper masthead (default)
 }
