@@ -13,11 +13,11 @@ const faqs = [
   },
   {
     q: "What format does the JSON need to be?",
-    a: "We support the popular jsonresume.org schema out-of-the-box. You can also download our simple flat template if you're starting from scratch.",
+    a: "We support the popular jsonresume.org schema out-of-the-box. You can also download our simple flat template if you’re starting from scratch.",
   },
   {
     q: "How are my GitHub projects shown?",
-    a: "FolioCV fetches your top public repositories and takes a live screenshot of each project's deployed site. No more generic GitHub social previews.",
+    a: "FolioCV fetches your top public repositories and takes a live screenshot of each project’s deployed site. No more generic GitHub social previews.",
   },
   {
     q: "Can I edit the portfolio after generating?",
@@ -29,7 +29,7 @@ const faqs = [
   },
   {
     q: "Does it support dark mode?",
-    a: "Every generated portfolio ships with a light/dark toggle that respects the visitor's system preference.",
+    a: "Every generated portfolio ships with a light/dark toggle that respects the visitor’s system preference.",
   },
 ];
 
@@ -284,7 +284,7 @@ function Landing() {
         <div className="scroll-reveal grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-3">
           {[
             { n: "01", t: "Upload", d: "Drop a résumé JSON file and paste your GitHub username. We read it locally — nothing leaves your browser.", icon: "M4 16v1a3 3 0 006 0v-1m-4-4l4-4m0 0l4 4m-4-4v12" },
-            { n: "02", t: "Customise", d: "Tweak any text inline. Toggle projects. Pick from five minimal templates. Preview light and dark mode.", icon: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" },
+            { n: "02", t: "Customise", d: "Tweak any text inline. Toggle projects. Pick from four minimal templates. Preview light and dark mode.", icon: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" },
             { n: "03", t: "Download", d: "Get a zip of clean HTML, CSS & JS — yours to host anywhere. Netlify, GitHub Pages, Vercel, anywhere.", icon: "M4 16v1a3 3 0 006 0v-1m-4-4l4 4m0 0l4-4m-4 4V4" },
           ].map((s) => (
             <div key={s.n} className="bg-background p-6 sm:p-8">
@@ -326,24 +326,24 @@ function Landing() {
       <section className="border-t border-border mx-auto max-w-4xl px-5 pt-20 pb-20 sm:px-6 sm:pt-32 sm:pb-32">
         <div className="scroll-reveal mb-10 text-center sm:mb-12">
           <div className="mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">Templates</div>
-          <h2 className="font-serif text-3xl sm:text-5xl">Five minimal styles</h2>
+          <h2 className="font-serif text-3xl sm:text-5xl">Four minimal styles</h2>
           <p className="mt-4 text-muted-foreground max-w-md mx-auto text-sm sm:text-base">
             Every template ships with a light/dark toggle and clean, semantic HTML you can extend.
           </p>
         </div>
-        <div className="scroll-reveal grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="scroll-reveal grid grid-cols-2 gap-3">
           {[
-            { name: "Ink",   desc: "Newspaper masthead",   color: "from-zinc-900" },
-            { name: "Sheet", desc: "Swiss sidebar grid",   color: "from-stone-900" },
-            { name: "Mono",  desc: "Centred timeline",     color: "from-neutral-900" },
-            { name: "Paper", desc: "Notebook card layout", color: "from-zinc-800" },
-            { name: "Ruled", desc: "Horizontal row rules", color: "from-stone-800" },
+            { name: "Quiet",    desc: "Centered & minimal",   tagline: "read.cv inspired",      color: "from-zinc-900" },
+            { name: "Editorial", desc: "Bold serif layout",   tagline: "Magazine masthead",      color: "from-stone-900" },
+            { name: "Studio",   desc: "Sidebar + content",    tagline: "Swiss grid structured",  color: "from-neutral-900" },
+            { name: "Minimal",  desc: "Clean & typographic",  tagline: "Horizontal row rules",   color: "from-zinc-800" },
           ].map((t) => (
             <div key={t.name}
               className="group relative overflow-hidden rounded-2xl border border-border bg-card p-5 transition hover:border-foreground/40">
               <div className={`mb-4 h-24 w-full rounded-xl bg-gradient-to-b ${t.color} to-transparent opacity-60`} />
               <div className="font-serif text-lg sm:text-xl">{t.name}</div>
               <div className="mt-1 text-xs sm:text-sm text-muted-foreground">{t.desc}</div>
+              <div className="mt-0.5 text-[11px] text-muted-foreground/60">{t.tagline}</div>
               <div className="mt-3 text-xs text-muted-foreground group-hover:text-foreground transition-colors">Preview →</div>
             </div>
           ))}
@@ -423,7 +423,7 @@ function Landing() {
           </div>
           <div className="scroll-reveal grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-8">
             {[
-              { title: "100% private", body: "Everything runs in your browser. Your data never touches our servers. We don't have servers." },
+              { title: "100% private", body: "Everything runs in your browser. Your data never touches our servers. We don’t have servers." },
               { title: "Live site screenshots", body: "Projects show real screenshots of your deployed sites — not GitHub social previews." },
               { title: "Yours to own", body: "Download clean HTML/CSS/JS with no runtime dependencies, frameworks, or build steps." },
               { title: "jsonresume.org compatible", body: "Already have a JSON resume? Drop it in. FolioCV parses the standard schema automatically." },
@@ -494,7 +494,7 @@ function Landing() {
           <div className="scroll-reveal">
             <h2 className="font-serif text-4xl sm:text-6xl text-balance">Your portfolio,<br />in five minutes.</h2>
             <p className="mt-5 text-muted-foreground max-w-md mx-auto text-sm sm:text-base sm:mt-6">
-              No account. No templates to pay for. Just a quiet, beautiful portfolio that's entirely yours.
+              No account. No templates to pay for. Just a quiet, beautiful portfolio that’s entirely yours.
             </p>
             <Link to="/create"
               className="mt-8 inline-block rounded-full bg-foreground px-10 py-4 text-sm font-medium text-background transition-transform hover:scale-[1.02] active:scale-[0.98] sm:mt-10">
