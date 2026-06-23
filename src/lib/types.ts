@@ -43,4 +43,16 @@ export interface PortfolioData {
   accentColor?: string;
   /** Font family choice for the generated portfolio */
   fontFamily?: FontFamily;
+  /**
+   * ORCID iD (e.g. "0000-0002-1825-0097").
+   * Used to fetch publications list from the free ORCID public API.
+   */
+  orcid?: string;
+  /**
+   * Google Scholar user ID from the profile URL:
+   *   https://scholar.google.com/citations?user=<THIS_PART>
+   * Used (via /api/scholar serverless proxy) to display total citations,
+   * h-index, and i10-index on the portfolio.
+   */
+  scholarId?: string;
 }
