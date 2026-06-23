@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/Logo";
 
 export const Route = createFileRoute("/")({ component: Landing });
@@ -60,9 +60,46 @@ function GitHubIcon({ size = 16 }: { size?: number }) {
   );
 }
 
+function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-background">
+      <div className="flex items-center justify-between px-6 py-5">
+        <div className="flex items-center gap-2">
+          <Logo size={36} />
+          <span className="font-serif text-lg tracking-tight">FolioCV</span>
+        </div>
+        <button onClick={onClose} aria-label="Close menu" className="p-2 text-muted-foreground hover:text-foreground transition-colors">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <nav className="flex flex-col items-start gap-6 px-8 pt-8 text-lg">
+        <Link to="/showcase" onClick={onClose} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+          </svg>
+          Showcase
+        </Link>
+        <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" onClick={onClose}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+          <GitHubIcon size={16} />GitHub
+        </a>
+        <Link to="/create" onClick={onClose}
+          className="mt-2 w-full rounded-full bg-foreground px-6 py-3 text-center text-sm font-medium text-background hover:opacity-90 transition-opacity">
+          Start free →
+        </Link>
+      </nav>
+    </div>
+  );
+}
+
 function Landing() {
   const heroRef = useRef<HTMLDivElement>(null);
   const wordRef = useRef<HTMLSpanElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     let ctx: any;
@@ -110,12 +147,19 @@ function Landing() {
 
   return (
     <div ref={heroRef} className="min-h-screen relative overflow-hidden bg-background text-foreground">
-      <header className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-6 py-5 sm:px-10">
+
+      {/* Mobile fullscreen menu */}
+      <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
+
+      {/* HEADER */}
+      <header className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-5 py-4 sm:px-10 sm:py-5">
         <div className="flex items-center gap-2 m-fade">
-          <Logo size={40} />
-          <span className="font-serif text-xl tracking-tight">FolioCV</span>
+          <Logo size={36} />
+          <span className="font-serif text-lg sm:text-xl tracking-tight">FolioCV</span>
         </div>
-        <nav className="flex items-center gap-2 text-sm m-fade">
+
+        {/* Desktop nav */}
+        <nav className="hidden sm:flex items-center gap-2 text-sm m-fade">
           <Link
             to="/showcase"
             className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors text-sm"
@@ -135,44 +179,63 @@ function Landing() {
             Start free
           </Link>
         </nav>
+
+        {/* Mobile: Start free + hamburger */}
+        <div className="flex sm:hidden items-center gap-2 m-fade">
+          <Link to="/create"
+            className="rounded-full bg-foreground px-4 py-1.5 text-xs font-medium text-background hover:opacity-90 transition-opacity">
+            Start free
+          </Link>
+          <button
+            onClick={() => setMenuOpen(true)}
+            aria-label="Open menu"
+            className="p-2 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
       </header>
 
       {/* HERO */}
-      <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center px-6 text-center pt-24">
+      <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center px-5 text-center pt-24 sm:px-6">
         <div className="m-fade mb-3">
           <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-full border border-border bg-background/80 px-4 py-1.5 text-xs text-muted-foreground hover:border-foreground/40 hover:text-foreground transition-all backdrop-blur-sm">
+            className="inline-flex items-center gap-2 rounded-full border border-border bg-background/80 px-3 py-1.5 text-xs text-muted-foreground hover:border-foreground/40 hover:text-foreground transition-all backdrop-blur-sm sm:px-4">
             <GitHubIcon size={13} />
             <span className="font-medium text-foreground">Open Source</span>
-            <span className="text-border">·</span>
-            Star us on GitHub
+            <span className="text-border hidden xs:inline">·</span>
+            <span className="hidden xs:inline">Star us on GitHub</span>
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden>
               <path d="M2.5 7.5L7.5 2.5M7.5 2.5H3.5M7.5 2.5v4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </a>
         </div>
-        <div className="m-fade mb-4 inline-flex items-center gap-2 rounded-full border border-border px-4 py-1.5 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+        <div className="m-fade mb-4 inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs uppercase tracking-[0.15em] text-muted-foreground sm:px-4 sm:tracking-[0.2em]">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
           Portfolio builder · No signup required
         </div>
-        <h1 className="m-fade font-serif text-5xl leading-[1.05] text-balance sm:text-7xl">
+        <h1 className="m-fade font-serif text-[2.6rem] leading-[1.05] text-balance sm:text-7xl">
           Turn your{" "}
           <span style={{ display: "inline-block", overflow: "hidden", verticalAlign: "bottom", lineHeight: "inherit", height: "1.05em" }}>
             <span ref={wordRef} style={{ display: "inline-block" }} className="italic">resume.</span>
           </span>
           <br />into a portfolio.
         </h1>
-        <p className="m-fade mt-6 max-w-xl text-balance text-muted-foreground text-lg">
+        <p className="m-fade mt-5 max-w-xl text-balance text-muted-foreground text-base sm:text-lg sm:mt-6">
           Drop a résumé JSON, paste your GitHub handle. FolioCV crafts a quiet, beautiful portfolio
           you can tweak inline and download as plain HTML.
         </p>
-        <div className="m-fade mt-10 flex flex-wrap items-center justify-center gap-3">
+
+        {/* CTA buttons — stacked on mobile, row on desktop */}
+        <div className="m-fade mt-8 flex flex-col items-stretch w-full max-w-xs gap-3 sm:max-w-none sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-3 sm:mt-10">
           <Link to="/create"
-            className="rounded-full bg-foreground px-8 py-3.5 text-sm font-medium text-background transition-transform hover:scale-[1.02] active:scale-[0.98]">
+            className="rounded-full bg-foreground px-8 py-3.5 text-sm font-medium text-background text-center transition-transform hover:scale-[1.02] active:scale-[0.98]">
             Build mine →
           </Link>
           <Link to="/showcase"
-            className="inline-flex items-center gap-2 rounded-full border border-border px-8 py-3.5 text-sm hover:bg-accent transition-colors">
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-border px-8 py-3.5 text-sm hover:bg-accent transition-colors">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
               <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
@@ -180,14 +243,17 @@ function Landing() {
             View showcase
           </Link>
           <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-full border border-border px-8 py-3.5 text-sm hover:bg-accent transition-colors">
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-border px-8 py-3.5 text-sm hover:bg-accent transition-colors">
             <GitHubIcon size={14} />View source
           </a>
-          <a href="#how" className="rounded-full border border-border px-8 py-3.5 text-sm hover:bg-accent transition-colors">
+          <a href="#how"
+            className="rounded-full border border-border px-8 py-3.5 text-sm text-center hover:bg-accent transition-colors">
             How it works
           </a>
         </div>
-        <div className="m-fade mt-12 flex flex-wrap items-center justify-center gap-6 text-xs text-muted-foreground">
+
+        {/* Feature pills */}
+        <div className="m-fade mt-10 flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground sm:gap-6">
           {["No account needed", "100% browser-based", "Download clean code", "Dark mode included"].map((f) => (
             <span key={f} className="flex items-center gap-1.5">
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -197,19 +263,23 @@ function Landing() {
             </span>
           ))}
         </div>
-        <div className="m-fade mt-10 flex justify-center">
-          <a href="https://peerlist.io/vineetjassal/project/foliocv--resume-to-portfolio-in-seconds" target="_blank" rel="noopener noreferrer">
+
+        {/* Peerlist badge — constrained so it never overflows */}
+        <div className="m-fade mt-10 flex justify-center w-full overflow-hidden">
+          <a href="https://peerlist.io/vineetjassal/project/foliocv--resume-to-portfolio-in-seconds" target="_blank" rel="noopener noreferrer"
+            className="max-w-full">
             <img src="https://peerlist.io/api/v1/projects/embed/PRJHMQ6BELPRQNGBLHJBAEQMQPENEL?showUpvote=true&theme=dark"
-              alt="FolioCV on Peerlist Launchpad" style={{ width: "auto", height: "56px" }} />
+              alt="FolioCV on Peerlist Launchpad"
+              style={{ width: "auto", height: "48px", maxWidth: "100%" }} />
           </a>
         </div>
       </main>
 
       {/* HOW IT WORKS */}
-      <section id="how" className="mx-auto max-w-4xl px-6 py-24 sm:py-32">
-        <div className="scroll-reveal mb-12 text-center">
+      <section id="how" className="mx-auto max-w-4xl px-5 py-20 sm:px-6 sm:py-32">
+        <div className="scroll-reveal mb-10 text-center sm:mb-12">
           <div className="mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">Simple process</div>
-          <h2 className="font-serif text-4xl sm:text-5xl">Three steps to live</h2>
+          <h2 className="font-serif text-3xl sm:text-5xl">Three steps to live</h2>
         </div>
         <div className="scroll-reveal grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-3">
           {[
@@ -217,7 +287,7 @@ function Landing() {
             { n: "02", t: "Customise", d: "Tweak any text inline. Toggle projects. Pick from five minimal templates. Preview light and dark mode.", icon: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" },
             { n: "03", t: "Download", d: "Get a zip of clean HTML, CSS & JS — yours to host anywhere. Netlify, GitHub Pages, Vercel, anywhere.", icon: "M4 16v1a3 3 0 006 0v-1m-4-4l4 4m0 0l4-4m-4 4V4" },
           ].map((s) => (
-            <div key={s.n} className="bg-background p-8">
+            <div key={s.n} className="bg-background p-6 sm:p-8">
               <div className="mb-5 flex items-center gap-3">
                 <span className="text-xs text-muted-foreground">{s.n}</span>
                 <svg className="text-muted-foreground" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -233,15 +303,15 @@ function Landing() {
 
       {/* SHOWCASE TEASER */}
       <section className="border-t border-border">
-        <div className="mx-auto max-w-4xl px-6 py-24 sm:py-32">
-          <div className="scroll-reveal flex flex-col sm:flex-row items-center justify-between gap-8">
+        <div className="mx-auto max-w-4xl px-5 py-20 sm:px-6 sm:py-32">
+          <div className="scroll-reveal flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
             <div>
               <div className="mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">Community</div>
-              <h2 className="font-serif text-3xl sm:text-4xl">See what others built</h2>
-              <p className="mt-3 text-muted-foreground max-w-md">Browse real portfolios made with FolioCV — from developers to designers to ML engineers.</p>
+              <h2 className="font-serif text-2xl sm:text-4xl">See what others built</h2>
+              <p className="mt-3 text-muted-foreground max-w-md text-sm sm:text-base">Browse real portfolios made with FolioCV — from developers to designers to ML engineers.</p>
             </div>
             <Link to="/showcase"
-              className="shrink-0 inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background hover:opacity-90 transition">
+              className="shrink-0 inline-flex items-center justify-center gap-2 rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background hover:opacity-90 transition">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
                 <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
@@ -252,16 +322,16 @@ function Landing() {
         </div>
       </section>
 
-      {/* TEMPLATES — updated to 5 */}
-      <section className="border-t border-border mx-auto max-w-4xl px-6 pt-24 pb-24 sm:pt-32 sm:pb-32">
-        <div className="scroll-reveal mb-12 text-center">
+      {/* TEMPLATES */}
+      <section className="border-t border-border mx-auto max-w-4xl px-5 pt-20 pb-20 sm:px-6 sm:pt-32 sm:pb-32">
+        <div className="scroll-reveal mb-10 text-center sm:mb-12">
           <div className="mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">Templates</div>
-          <h2 className="font-serif text-4xl sm:text-5xl">Five minimal styles</h2>
-          <p className="mt-4 text-muted-foreground max-w-md mx-auto">
+          <h2 className="font-serif text-3xl sm:text-5xl">Five minimal styles</h2>
+          <p className="mt-4 text-muted-foreground max-w-md mx-auto text-sm sm:text-base">
             Every template ships with a light/dark toggle and clean, semantic HTML you can extend.
           </p>
         </div>
-        <div className="scroll-reveal grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="scroll-reveal grid grid-cols-2 gap-3 sm:grid-cols-3">
           {[
             { name: "Ink",   desc: "Newspaper masthead",   color: "from-zinc-900" },
             { name: "Sheet", desc: "Swiss sidebar grid",   color: "from-stone-900" },
@@ -270,11 +340,11 @@ function Landing() {
             { name: "Ruled", desc: "Horizontal row rules", color: "from-stone-800" },
           ].map((t) => (
             <div key={t.name}
-              className="group relative overflow-hidden rounded-2xl border border-border bg-card p-6 transition hover:border-foreground/40">
-              <div className={`mb-4 h-32 w-full rounded-xl bg-gradient-to-b ${t.color} to-transparent opacity-60`} />
-              <div className="font-serif text-xl">{t.name}</div>
-              <div className="mt-1 text-sm text-muted-foreground">{t.desc}</div>
-              <div className="mt-4 text-xs text-muted-foreground group-hover:text-foreground transition-colors">Preview in editor →</div>
+              className="group relative overflow-hidden rounded-2xl border border-border bg-card p-5 transition hover:border-foreground/40">
+              <div className={`mb-4 h-24 w-full rounded-xl bg-gradient-to-b ${t.color} to-transparent opacity-60`} />
+              <div className="font-serif text-lg sm:text-xl">{t.name}</div>
+              <div className="mt-1 text-xs sm:text-sm text-muted-foreground">{t.desc}</div>
+              <div className="mt-3 text-xs text-muted-foreground group-hover:text-foreground transition-colors">Preview →</div>
             </div>
           ))}
         </div>
@@ -282,18 +352,18 @@ function Landing() {
 
       {/* BONDR ADVERTISEMENT */}
       <section className="border-t border-border">
-        <div className="mx-auto max-w-4xl px-6 py-24 sm:py-32">
-          <div className="scroll-reveal relative overflow-hidden rounded-3xl border border-border bg-card p-8 sm:p-12">
+        <div className="mx-auto max-w-4xl px-5 py-20 sm:px-6 sm:py-32">
+          <div className="scroll-reveal relative overflow-hidden rounded-3xl border border-border bg-card p-6 sm:p-12">
             <div aria-hidden className="pointer-events-none absolute -top-32 -right-32 h-80 w-80 rounded-full"
               style={{ background: "radial-gradient(circle, oklch(0.65 0.2 340 / 0.12), transparent 70%)" }} />
             <div aria-hidden className="pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full"
               style={{ background: "radial-gradient(circle, oklch(0.6 0.18 260 / 0.08), transparent 70%)" }} />
             <div className="relative">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-background/60 px-4 py-1.5 text-xs uppercase tracking-[0.2em] text-muted-foreground backdrop-blur-sm">
+              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-background/60 px-4 py-1.5 text-xs uppercase tracking-[0.2em] text-muted-foreground backdrop-blur-sm">
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-pink-500 animate-pulse" />
                 Also by Vineet Jassal
               </div>
-              <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 sm:gap-16 items-center">
+              <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 sm:gap-16 sm:items-center">
                 <div>
                   <div className="flex items-center gap-3 mb-4">
                     <svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-label="Bondr logo">
@@ -302,10 +372,10 @@ function Landing() {
                     </svg>
                     <span className="font-serif text-3xl tracking-tight">Bondr</span>
                   </div>
-                  <p className="text-lg text-muted-foreground leading-relaxed mb-2">
+                  <p className="text-base text-muted-foreground leading-relaxed mb-2">
                     <span className="text-foreground font-medium">Hinge, but for builders.</span>
                   </p>
-                  <p className="text-sm text-muted-foreground leading-relaxed mb-8">
+                  <p className="text-sm text-muted-foreground leading-relaxed mb-6">
                     Browse beautiful bento-grid developer profiles, swipe on the engineers and
                     designers who match your vibe, and find your next co-founder.
                   </p>
@@ -322,11 +392,11 @@ function Landing() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   {bondrFeatures.map((f) => (
-                    <div key={f.label} className="flex flex-col gap-3 rounded-2xl border border-border bg-background/60 p-5 backdrop-blur-sm">
+                    <div key={f.label} className="flex flex-col gap-3 rounded-2xl border border-border bg-background/60 p-4 backdrop-blur-sm sm:p-5">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
                         <path d={f.icon} />
                       </svg>
-                      <span className="text-sm font-medium">{f.label}</span>
+                      <span className="text-xs sm:text-sm font-medium">{f.label}</span>
                     </div>
                   ))}
                   <div className="col-span-2 rounded-2xl border border-border bg-background/60 p-4 backdrop-blur-sm">
@@ -346,12 +416,12 @@ function Landing() {
 
       {/* FEATURES */}
       <section className="border-t border-border">
-        <div className="mx-auto max-w-4xl px-6 py-24 sm:py-32">
-          <div className="scroll-reveal mb-16 text-center">
+        <div className="mx-auto max-w-4xl px-5 py-20 sm:px-6 sm:py-32">
+          <div className="scroll-reveal mb-12 text-center sm:mb-16">
             <div className="mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">Why FolioCV</div>
-            <h2 className="font-serif text-4xl sm:text-5xl">Built different</h2>
+            <h2 className="font-serif text-3xl sm:text-5xl">Built different</h2>
           </div>
-          <div className="scroll-reveal grid grid-cols-1 gap-8 sm:grid-cols-2">
+          <div className="scroll-reveal grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-8">
             {[
               { title: "100% private", body: "Everything runs in your browser. Your data never touches our servers. We don't have servers." },
               { title: "Live site screenshots", body: "Projects show real screenshots of your deployed sites — not GitHub social previews." },
@@ -374,11 +444,11 @@ function Landing() {
 
       {/* OPEN SOURCE BANNER */}
       <section className="border-t border-border">
-        <div className="mx-auto max-w-4xl px-6 py-16 sm:py-20">
-          <div className="scroll-reveal flex flex-col sm:flex-row items-center justify-between gap-6 rounded-2xl border border-border bg-card px-8 py-8">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-border bg-background">
-                <GitHubIcon size={22} />
+        <div className="mx-auto max-w-4xl px-5 py-14 sm:px-6 sm:py-20">
+          <div className="scroll-reveal flex flex-col gap-5 rounded-2xl border border-border bg-card px-6 py-6 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-8 sm:py-8">
+            <div className="flex items-start gap-4 sm:items-center">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-background">
+                <GitHubIcon size={20} />
               </div>
               <div>
                 <div className="font-medium text-base">We are open source</div>
@@ -386,7 +456,7 @@ function Landing() {
               </div>
             </div>
             <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer"
-              className="shrink-0 inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-2.5 text-sm font-medium text-background transition-transform hover:scale-[1.02] active:scale-[0.98]">
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-foreground px-6 py-2.5 text-sm font-medium text-background transition-transform hover:scale-[1.02] active:scale-[0.98] sm:shrink-0">
               <GitHubIcon size={14} />View on GitHub
             </a>
           </div>
@@ -395,15 +465,15 @@ function Landing() {
 
       {/* FAQ */}
       <section className="border-t border-border" id="faq">
-        <div className="mx-auto max-w-2xl px-6 py-24 sm:py-32">
-          <div className="scroll-reveal mb-16 text-center">
+        <div className="mx-auto max-w-2xl px-5 py-20 sm:px-6 sm:py-32">
+          <div className="scroll-reveal mb-12 text-center sm:mb-16">
             <div className="mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">FAQ</div>
-            <h2 className="font-serif text-4xl sm:text-5xl">Common questions</h2>
+            <h2 className="font-serif text-3xl sm:text-5xl">Common questions</h2>
           </div>
           <div className="scroll-reveal space-y-0 divide-y divide-border">
             {faqs.map((item, i) => (
-              <details key={i} className="group py-6 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-                <summary className="flex items-center justify-between gap-4 font-medium text-base select-none">
+              <details key={i} className="group py-5 cursor-pointer list-none [&::-webkit-details-marker]:hidden sm:py-6">
+                <summary className="flex items-center justify-between gap-4 font-medium text-sm sm:text-base select-none">
                   <span>{item.q}</span>
                   <span className="shrink-0 h-6 w-6 rounded-full border border-border flex items-center justify-center text-muted-foreground transition-transform group-open:rotate-45">
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -420,14 +490,14 @@ function Landing() {
 
       {/* FINAL CTA */}
       <section className="border-t border-border">
-        <div className="mx-auto max-w-3xl px-6 py-24 sm:py-32 text-center">
+        <div className="mx-auto max-w-3xl px-5 py-20 text-center sm:px-6 sm:py-32">
           <div className="scroll-reveal">
-            <h2 className="font-serif text-5xl sm:text-6xl text-balance">Your portfolio,<br />in five minutes.</h2>
-            <p className="mt-6 text-muted-foreground max-w-md mx-auto">
-              No account. No templates to pay for. Just a quiet, beautiful portfolio that’s entirely yours.
+            <h2 className="font-serif text-4xl sm:text-6xl text-balance">Your portfolio,<br />in five minutes.</h2>
+            <p className="mt-5 text-muted-foreground max-w-md mx-auto text-sm sm:text-base sm:mt-6">
+              No account. No templates to pay for. Just a quiet, beautiful portfolio that's entirely yours.
             </p>
             <Link to="/create"
-              className="mt-10 inline-block rounded-full bg-foreground px-10 py-4 text-sm font-medium text-background transition-transform hover:scale-[1.02] active:scale-[0.98]">
+              className="mt-8 inline-block rounded-full bg-foreground px-10 py-4 text-sm font-medium text-background transition-transform hover:scale-[1.02] active:scale-[0.98] sm:mt-10">
               Get started free →
             </Link>
           </div>
@@ -436,14 +506,15 @@ function Landing() {
 
       {/* FOOTER */}
       <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-4xl flex-col items-center gap-4 px-6 py-8 sm:flex-row sm:justify-between text-xs text-muted-foreground">
+        <div className="mx-auto flex max-w-4xl flex-col items-center gap-4 px-5 py-8 sm:flex-row sm:justify-between sm:px-6 text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
-            <Logo size={28} />
+            <Logo size={26} />
             <span>FolioCV</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col items-center gap-2 text-center sm:flex-row sm:items-center sm:gap-4 sm:text-left">
             <Link to="/showcase" className="hover:text-foreground transition-colors">Showcase</Link>
-            <span>Made with care · No accounts, no tracking</span>
+            <span className="hidden sm:inline">Made with care · No accounts, no tracking</span>
+            <span className="sm:hidden">No accounts, no tracking</span>
             <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 hover:text-foreground transition-colors">
               <GitHubIcon size={13} />Open source
             </a>
