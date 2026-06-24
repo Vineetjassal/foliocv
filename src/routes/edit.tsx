@@ -18,7 +18,6 @@ const TEMPLATES: { id: TemplateId; name: string; tagline: string }[] = [
   { id: "centered", name: "Quiet", tagline: "Centered & minimal · read.cv inspired" },
   { id: "split", name: "Studio", tagline: "Sidebar + content · structured" },
   { id: "editorial", name: "Editorial", tagline: "Bold serif · magazine layout" },
-  { id: "aurora", name: "Aurora", tagline: "Dark gradient · glassmorphism" },
   { id: "minimal", name: "Minimal", tagline: "Clean light · typographic" },
 ];
 
@@ -75,7 +74,6 @@ function KeyboardShortcutsModal({ onClose }: { onClose: () => void }) {
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="relative w-full max-w-sm rounded-2xl border border-border bg-card shadow-2xl mx-4">
-        {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div className="flex items-center gap-2">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted-foreground">
@@ -95,7 +93,6 @@ function KeyboardShortcutsModal({ onClose }: { onClose: () => void }) {
             </svg>
           </button>
         </div>
-        {/* Shortcut list */}
         <div className="divide-y divide-border">
           {SHORTCUTS.map(({ key, desc }) => (
             <div key={key} className="flex items-center justify-between px-5 py-2.5">
@@ -106,7 +103,6 @@ function KeyboardShortcutsModal({ onClose }: { onClose: () => void }) {
             </div>
           ))}
         </div>
-        {/* Footer */}
         <div className="px-5 py-3 border-t border-border">
           <p className="text-[10px] text-muted-foreground text-center">Press <kbd className="rounded border border-border bg-muted px-1 font-mono text-[9px]">Esc</kbd> or click outside to close</p>
         </div>
@@ -367,26 +363,20 @@ function Editor() {
   const appTheme = useAppTheme();
   const [showShortcuts, setShowShortcuts] = useState(false);
 
-  // Section reorder state
   const [sections, setSections] = useState<Section[]>(DEFAULT_SECTIONS);
 
-  // Auto-save status (visual only — actual persist is done by zustand/persist)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Draft-restored toast
   const [showDraftToast, setShowDraftToast] = useState(false);
   const restoredRef = useRef(false);
 
-  // Show toast once if we landed on /edit with a persisted draft (no in-session navigation)
   useEffect(() => {
     if (restoredRef.current) return;
     restoredRef.current = true;
     if (data && savedAt) {
       const fromCreate = sessionStorage.getItem("foliocv_from_create");
-      if (!fromCreate) {
-        setShowDraftToast(true);
-      }
+      if (!fromCreate) setShowDraftToast(true);
       sessionStorage.removeItem("foliocv_from_create");
     }
   }, []);
@@ -395,7 +385,6 @@ function Editor() {
     if (!data) navigate({ to: "/create" });
   }, [data, navigate]);
 
-  // Visual save-status debounce
   useEffect(() => {
     if (!data) return;
     setSaveStatus("unsaved");
@@ -407,7 +396,6 @@ function Editor() {
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
   }, [data, template]);
 
-  // Global keyboard shortcuts
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       const tag = (e.target as HTMLElement).tagName;
@@ -467,10 +455,8 @@ function Editor() {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
-      {/* Keyboard shortcuts modal */}
       {showShortcuts && <KeyboardShortcutsModal onClose={() => setShowShortcuts(false)} />}
 
-      {/* Draft restored toast */}
       {showDraftToast && savedAt && (
         <DraftRestoredToast
           savedAt={savedAt}
@@ -496,8 +482,6 @@ function Editor() {
         </div>
         <div className="flex items-center gap-2">
           <SaveBadge status={saveStatus} savedAt={savedAt} />
-
-          {/* Keyboard shortcuts button */}
           <button
             onClick={() => setShowShortcuts(true)}
             aria-label="Show keyboard shortcuts"
@@ -510,8 +494,6 @@ function Editor() {
             </svg>
             Shortcuts
           </button>
-
-          {/* App-level dark/light toggle */}
           <button
             onClick={toggleAppTheme}
             aria-label="Toggle dark/light mode"
@@ -529,7 +511,6 @@ function Editor() {
             )}
             {appTheme === "dark" ? "Dark" : "Light"}
           </button>
-
           <button
             onClick={handleDownload}
             className="rounded-full bg-foreground px-4 py-1.5 text-xs font-medium text-background hover:opacity-90"
@@ -580,7 +561,6 @@ function Editor() {
                   </button>
                 ))}
 
-                {/* Section reordering */}
                 <div className="pt-4">
                   <div className="mb-3 text-xs uppercase tracking-[0.18em] text-muted-foreground">
                     Section Order
@@ -598,8 +578,6 @@ function Editor() {
             {tab === "content" && <ContentPanel data={data} patch={patch} />}
             {tab === "projects" && <ProjectsPanel data={data} patch={patch} />}
           </div>
-
-          {/* ── Bondr ad — pinned to sidebar bottom ── */}
           <BondrAd />
         </aside>
 
@@ -688,24 +666,6 @@ function TemplatePreview({ id }: { id: TemplateId }) {
             <rect x="10" y="40" width="50" height="14" fill="currentColor" opacity="0.2" />
             <rect x="68" y="40" width="50" height="14" fill="currentColor" opacity="0.2" />
             <rect x="126" y="40" width="50" height="14" fill="currentColor" opacity="0.2" />
-          </>
-        )}
-        {id === "aurora" && (
-          <>
-            <defs>
-              <linearGradient id="auroraGrad" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.8" />
-                <stop offset="50%" stopColor="#0ea5e9" stopOpacity="0.8" />
-                <stop offset="100%" stopColor="#10b981" stopOpacity="0.8" />
-              </linearGradient>
-            </defs>
-            <rect x="0" y="0" width="200" height="60" fill="#04050d" />
-            <ellipse cx="40" cy="20" rx="35" ry="25" fill="#7c3aed" opacity="0.18" />
-            <ellipse cx="160" cy="40" rx="40" ry="22" fill="#0ea5e9" opacity="0.15" />
-            <circle cx="30" cy="18" r="8" fill="url(#auroraGrad)" opacity="0.9" />
-            <rect x="46" y="13" width="60" height="4" rx="2" fill="url(#auroraGrad)" opacity="0.9" />
-            <rect x="46" y="22" width="40" height="2" rx="1" fill="#a78bfa" opacity="0.5" />
-            <rect x="10" y="36" width="180" height="14" rx="4" fill="white" opacity="0.04" />
           </>
         )}
         {id === "minimal" && (
