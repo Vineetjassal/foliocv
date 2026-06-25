@@ -4,7 +4,7 @@ import { Logo } from "@/components/Logo";
 import { useStore } from "@/lib/store";
 import { buildSite } from "@/lib/templates";
 import { enhanceBio } from "@/lib/aiBio";
-import { screenshotUrl, pushPortfolioJson, extractUsername } from "@/lib/github";
+import { screenshotUrl, pushPortfolioJson, extractUsername, deployToGitHubPages, deployToVercel } from "@/lib/github";
 import type { PortfolioData, Project, TemplateId } from "@/lib/types";
 import { toggleAppTheme, useAppTheme } from "./__root";
 import { SortableSectionList, type Section } from "@/components/SortableSectionList";
@@ -353,10 +353,248 @@ function SkillsField({
   );
 }
 
+// ── Deploy Panel ──────────────────────────────────────────────────────────────
+function DeployPanel({ data, built }: { data: PortfolioData; built: { html: string; css: string } | null }) {
+  const [token, setToken] = useState("");
+  const [vercelToken, setVercelToken] = useState("");
+  const [ghDeploying, setGhDeploying] = useState(false);
+  const [vercelDeploying, setVercelDeploying] = useState(false);
+  const [ghResult, setGhResult] = useState<{ ok: boolean; siteUrl?: string; repoUrl?: string; error?: string } | null>(null);
+  const [vercelResult, setVercelResult] = useState<{ ok: boolean; url?: string; error?: string } | null>(null);
+  const [activeTab, setActiveTab] = useState<"github" | "vercel">("github");
+
+  const username = data.github ? extractUsername(data.github) : "";
+
+  async function handleGhDeploy() {
+    if (!built) return;
+    if (!username) { setGhResult({ ok: false, error: "Add your GitHub handle in the Content tab first." }); return; }
+    if (!token.trim()) { setGhResult({ ok: false, error: "Paste your GitHub Personal Access Token above." }); return; }
+    setGhDeploying(true); setGhResult(null);
+    const result = await deployToGitHubPages(username, token.trim(), built.html, built.css);
+    setGhDeploying(false);
+    setGhResult(result);
+  }
+
+  async function handleVercelDeploy() {
+    if (!built) return;
+    if (!vercelToken.trim()) { setVercelResult({ ok: false, error: "Paste your Vercel Token above." }); return; }
+    setVercelDeploying(true); setVercelResult(null);
+    const result = await deployToVercel(vercelToken.trim(), built.html, built.css);
+    setVercelDeploying(false);
+    setVercelResult(result);
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div>
+        <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Deploy Portfolio</div>
+        <p className="mt-1 text-[10px] text-muted-foreground leading-relaxed">
+          Publish your portfolio live — no manual ZIP upload required.
+        </p>
+      </div>
+
+      {/* Tab switcher */}
+      <div className="flex rounded-lg border border-border overflow-hidden text-[10px]">
+        <button
+          onClick={() => setActiveTab("github")}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 transition ${activeTab === "github" ? "bg-foreground text-background font-medium" : "text-muted-foreground hover:text-foreground hover:bg-accent"}`}
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.2 11.39.6.11.82-.26.82-.57v-2c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.08 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 013-.4c1.02.005 2.04.14 3 .4 2.28-1.55 3.29-1.23 3.29-1.23.66 1.66.25 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.21.69.82.57C20.56 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z" />
+          </svg>
+          GitHub Pages
+        </button>
+        <button
+          onClick={() => setActiveTab("vercel")}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 transition ${activeTab === "vercel" ? "bg-foreground text-background font-medium" : "text-muted-foreground hover:text-foreground hover:bg-accent"}`}
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2L2 19.5h20L12 2z" />
+          </svg>
+          Vercel
+        </button>
+      </div>
+
+      {/* GitHub Pages tab */}
+      {activeTab === "github" && (
+        <div className="space-y-3">
+          <div className="rounded-lg border border-border bg-background/60 p-3 space-y-1.5">
+            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />
+              Free · Custom domain supported · Auto-updates on redeploy
+            </div>
+            <p className="text-[10px] text-muted-foreground leading-relaxed">
+              Creates a public repo <code className="rounded bg-muted px-1">foliocv-portfolio</code> and enables GitHub Pages.
+              Your site will be live at{" "}
+              <span className="font-mono text-foreground">
+                {username ? `${username}.github.io/foliocv-portfolio` : "username.github.io/foliocv-portfolio"}
+              </span>
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              Personal Access Token
+            </label>
+            <input
+              type="password"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+              className="w-full rounded-md border border-border bg-muted px-3 py-1.5 text-xs outline-none focus:border-foreground font-mono"
+              autoComplete="off"
+            />
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              Needs <code className="rounded bg-muted px-1">repo</code> scope.{" "}
+              <a href="https://github.com/settings/tokens/new?scopes=repo&description=FolioCV+Deploy" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+                Generate one →
+              </a>
+            </p>
+          </div>
+
+          <button
+            onClick={handleGhDeploy}
+            disabled={ghDeploying || !built}
+            className="w-full flex items-center justify-center gap-2 rounded-lg bg-foreground py-2.5 text-xs font-medium text-background hover:opacity-90 disabled:opacity-50 transition"
+          >
+            {ghDeploying ? (
+              <>
+                <span className="h-3 w-3 animate-spin rounded-full border-2 border-background border-t-transparent" />
+                Deploying…
+              </>
+            ) : (
+              <>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+                🚀 Deploy to GitHub Pages
+              </>
+            )}
+          </button>
+
+          {ghResult && (
+            <div className={`rounded-lg border p-3 space-y-2 ${ghResult.ok ? "border-green-500/30 bg-green-500/5" : "border-destructive/30 bg-destructive/5"}`}>
+              {ghResult.ok ? (
+                <>
+                  <div className="flex items-center gap-1.5 text-[11px] font-medium text-green-600 dark:text-green-400">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+                    Deployed successfully!
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    It may take 1–2 minutes for GitHub Pages to go live.
+                  </p>
+                  <div className="flex flex-col gap-1.5">
+                    <a href={ghResult.siteUrl} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 rounded-md border border-green-500/40 bg-green-500/10 px-3 py-1.5 text-[10px] font-medium text-green-700 dark:text-green-300 hover:bg-green-500/20 transition"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20" /></svg>
+                      {ghResult.siteUrl}
+                    </a>
+                    <a href={ghResult.repoUrl} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-[10px] text-muted-foreground hover:bg-accent transition"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.2 11.39.6.11.82-.26.82-.57v-2c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.08 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 013-.4c1.02.005 2.04.14 3 .4 2.28-1.55 3.29-1.23 3.29-1.23.66 1.66.25 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.21.69.82.57C20.56 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z" /></svg>
+                      View repo on GitHub
+                    </a>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-start gap-1.5 text-[10px] text-destructive">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mt-0.5 shrink-0"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                  {ghResult.error}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Vercel tab */}
+      {activeTab === "vercel" && (
+        <div className="space-y-3">
+          <div className="rounded-lg border border-border bg-background/60 p-3 space-y-1.5">
+            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500" />
+              Free · Global CDN · Instant HTTPS
+            </div>
+            <p className="text-[10px] text-muted-foreground leading-relaxed">
+              Deploys your portfolio as a single-file site to Vercel's global edge network. Get a live <code className="rounded bg-muted px-1">*.vercel.app</code> URL instantly.
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              Vercel Token
+            </label>
+            <input
+              type="password"
+              value={vercelToken}
+              onChange={(e) => setVercelToken(e.target.value)}
+              placeholder="Vercel personal access token"
+              className="w-full rounded-md border border-border bg-muted px-3 py-1.5 text-xs outline-none focus:border-foreground font-mono"
+              autoComplete="off"
+            />
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              <a href="https://vercel.com/account/tokens" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+                Get token from Vercel dashboard →
+              </a>
+            </p>
+          </div>
+
+          <button
+            onClick={handleVercelDeploy}
+            disabled={vercelDeploying || !built}
+            className="w-full flex items-center justify-center gap-2 rounded-lg bg-foreground py-2.5 text-xs font-medium text-background hover:opacity-90 disabled:opacity-50 transition"
+          >
+            {vercelDeploying ? (
+              <>
+                <span className="h-3 w-3 animate-spin rounded-full border-2 border-background border-t-transparent" />
+                Deploying…
+              </>
+            ) : (
+              <>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 19.5h20L12 2z" /></svg>
+                ▲ Deploy to Vercel
+              </>
+            )}
+          </button>
+
+          {vercelResult && (
+            <div className={`rounded-lg border p-3 space-y-2 ${vercelResult.ok ? "border-blue-500/30 bg-blue-500/5" : "border-destructive/30 bg-destructive/5"}`}>
+              {vercelResult.ok ? (
+                <>
+                  <div className="flex items-center gap-1.5 text-[11px] font-medium text-blue-600 dark:text-blue-400">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+                    Deployed to Vercel!
+                  </div>
+                  <a href={vercelResult.url} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 rounded-md border border-blue-500/40 bg-blue-500/10 px-3 py-1.5 text-[10px] font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-500/20 transition"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20" /></svg>
+                    {vercelResult.url}
+                  </a>
+                </>
+              ) : (
+                <div className="flex items-start gap-1.5 text-[10px] text-destructive">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mt-0.5 shrink-0"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                  {vercelResult.error}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Editor() {
   const navigate = useNavigate();
   const { data, template, savedAt, patch, setTemplate, clearDraft } = useStore();
-  const [tab, setTab] = useState<"design" | "content" | "projects">("design");
+  const [tab, setTab] = useState<"design" | "content" | "projects" | "deploy">("design");
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeTheme, setIframeTheme] = useState<"dark" | "light">("dark");
   const [deviceMode, setDeviceMode] = useState<DeviceMode>("desktop");
@@ -403,6 +641,7 @@ function Editor() {
       if (e.key === "1") setTab("design");
       else if (e.key === "2") setTab("content");
       else if (e.key === "3") setTab("projects");
+      else if (e.key === "4") setTab("deploy");
       else if (e.key === "t" || e.key === "T") setIframeTheme((t) => (t === "dark" ? "light" : "dark"));
       else if (e.key === "?") setShowShortcuts((v) => !v);
       else if ((e.ctrlKey || e.metaKey) && e.key === "d") { e.preventDefault(); handleDownload(); }
@@ -512,6 +751,12 @@ function Editor() {
             {appTheme === "dark" ? "Dark" : "Light"}
           </button>
           <button
+            onClick={() => setTab("deploy")}
+            className="rounded-full border border-border bg-gradient-to-r from-violet-500/10 to-blue-500/10 px-4 py-1.5 text-xs font-medium text-foreground hover:from-violet-500/20 hover:to-blue-500/20 transition"
+          >
+            🚀 Deploy
+          </button>
+          <button
             onClick={handleDownload}
             className="rounded-full bg-foreground px-4 py-1.5 text-xs font-medium text-background hover:opacity-90"
           >
@@ -524,15 +769,19 @@ function Editor() {
         {/* ── Sidebar ── */}
         <aside className="flex w-[380px] shrink-0 flex-col border-r border-border bg-card">
           <div className="flex border-b border-border text-xs">
-            {(["design", "content", "projects"] as const).map((t) => (
+            {(["design", "content", "projects", "deploy"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
                 className={`flex-1 py-3 capitalize transition ${
                   tab === t ? "bg-background text-foreground" : "text-muted-foreground hover:text-foreground"
-                }`}
+                } ${t === "deploy" ? "relative" : ""}`}
               >
-                {t}
+                {t === "deploy" ? (
+                  <span className="flex items-center justify-center gap-1">
+                    🚀 <span>Deploy</span>
+                  </span>
+                ) : t}
               </button>
             ))}
           </div>
@@ -577,6 +826,7 @@ function Editor() {
             )}
             {tab === "content" && <ContentPanel data={data} patch={patch} />}
             {tab === "projects" && <ProjectsPanel data={data} patch={patch} />}
+            {tab === "deploy" && <DeployPanel data={data} built={built} />}
           </div>
           <BondrAd />
         </aside>
