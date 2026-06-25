@@ -470,7 +470,7 @@ function DeployPanel({ data, built }: { data: PortfolioData; built: { html: stri
                   <polyline points="15 3 21 3 21 9" />
                   <line x1="10" y1="14" x2="21" y2="3" />
                 </svg>
-                🚀 Deploy to GitHub Pages
+                Deploy to GitHub Pages
               </>
             )}
           </button>
@@ -754,7 +754,7 @@ function Editor() {
             onClick={() => setTab("deploy")}
             className="rounded-full border border-border bg-gradient-to-r from-violet-500/10 to-blue-500/10 px-4 py-1.5 text-xs font-medium text-foreground hover:from-violet-500/20 hover:to-blue-500/20 transition"
           >
-            🚀 Deploy
+            Deploy
           </button>
           <button
             onClick={handleDownload}
@@ -775,13 +775,9 @@ function Editor() {
                 onClick={() => setTab(t)}
                 className={`flex-1 py-3 capitalize transition ${
                   tab === t ? "bg-background text-foreground" : "text-muted-foreground hover:text-foreground"
-                } ${t === "deploy" ? "relative" : ""}`}
+                }`}
               >
-                {t === "deploy" ? (
-                  <span className="flex items-center justify-center gap-1">
-                    🚀 <span>Deploy</span>
-                  </span>
-                ) : t}
+                {t}
               </button>
             ))}
           </div>
