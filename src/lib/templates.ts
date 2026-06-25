@@ -56,6 +56,93 @@ function gallerySection(images: string[]): string {
 <script>(function(){var I=document.querySelectorAll('.gl-img'),D=document.querySelectorAll('.gl-dot'),c=0;function go(n){I[c].classList.remove('active');D[c].classList.remove('active');c=(n+I.length)%I.length;I[c].classList.add('active');D[c].classList.add('active');}window.glTo=go;window.glPrev=function(){go(c-1);};window.glNext=function(){go(c+1);};var t=0;var el=document.getElementById('gl');el.addEventListener('touchstart',function(e){t=e.touches[0].clientX;},{passive:true});el.addEventListener('touchend',function(e){var d=e.changedTouches[0].clientX-t;if(Math.abs(d)>40){d<0?glNext():glPrev();}},{passive:true});})();<\/script>`;
 }
 
+// ── SEO + OG meta block ────────────────────────────────────────────────────────
+// Generates a full set of Open Graph, Twitter Card, canonical, and JSON-LD tags.
+// og:image uses the user's avatar when available; falls back to a lightweight
+// SVG data-URI card generated entirely in the browser (no external service needed).
+function buildSeoHead(data: PortfolioData): string {
+  const name    = esc(data.name  || "Portfolio");
+  const title   = esc(data.title || "");
+  const bio     = esc(data.bio   || data.about || `${name}'s portfolio`);
+  const siteUrl = esc(data.website || "");
+
+  // ── OG image ────────────────────────────────────────────────────────────────
+  // Priority: avatar (if it's an http URL) → SVG card data-URI
+  let ogImage = "";
+  if (data.avatar && data.avatar.startsWith("http")) {
+    ogImage = esc(data.avatar);
+  } else {
+    // Build a 1200×630 SVG OG card encoded as a data-URI
+    // Dark card with name + title centered — no external dependency
+    const svgName  = (data.name  || "Portfolio").replace(/[<>&"]/g, "");
+    const svgTitle = (data.title || "").replace(/[<>&"]/g, "");
+    const svgBio   = (data.bio   || "").slice(0, 90).replace(/[<>&"]/g, "");
+    const initials = svgName.split(" ").slice(0, 2).map(w => w[0] || "").join("").toUpperCase();
+
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a0a0a"/>
+      <stop offset="100%" stop-color="#1a1a1a"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="60" y="60" width="1080" height="510" rx="24" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1.5"/>
+  <!-- Avatar placeholder circle -->
+  <circle cx="180" cy="315" r="80" fill="#222" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
+  <text x="180" y="328" text-anchor="middle" font-family="system-ui,sans-serif" font-size="48" font-weight="700" fill="rgba(255,255,255,0.7)">${initials}</text>
+  <!-- Name -->
+  <text x="310" y="280" font-family="Georgia,serif" font-size="64" font-weight="700" fill="#ffffff" letter-spacing="-2">${svgName}</text>
+  ${svgTitle ? `<text x="312" y="340" font-family="system-ui,sans-serif" font-size="28" fill="rgba(255,255,255,0.55)" letter-spacing="1">${svgTitle}</text>` : ""}
+  ${svgBio   ? `<text x="312" y="400" font-family="system-ui,sans-serif" font-size="22" fill="rgba(255,255,255,0.35)">${svgBio}</text>` : ""}
+  <!-- FolioCV badge -->
+  <text x="1140" y="600" text-anchor="end" font-family="system-ui,sans-serif" font-size="18" fill="rgba(255,255,255,0.2)" letter-spacing="2">FOLIOCV</text>
+</svg>`;
+    ogImage = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  }
+
+  // ── JSON-LD Person schema ────────────────────────────────────────────────────
+  const sameAs: string[] = [];
+  if (data.website) sameAs.push(data.website);
+  if (data.github)  sameAs.push(`https://github.com/${data.github}`);
+  (data.links ?? []).forEach(l => { if (l.url) sameAs.push(l.url); });
+  const jsonLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: data.name || "",
+    jobTitle: data.title || undefined,
+    description: data.bio || data.about || undefined,
+    email: data.email || undefined,
+    url: data.website || undefined,
+    image: data.avatar && data.avatar.startsWith("http") ? data.avatar : undefined,
+    sameAs: sameAs.length ? sameAs : undefined,
+  });
+
+  return `
+<!-- Primary SEO -->
+<meta name="description" content="${bio}" />
+<meta name="author" content="${name}" />
+${siteUrl ? `<link rel="canonical" href="${siteUrl}" />` : ""}
+
+<!-- Open Graph -->
+<meta property="og:type"        content="profile" />
+<meta property="og:title"       content="${name}${title ? ` — ${title}` : ""}" />
+<meta property="og:description" content="${bio}" />
+<meta property="og:image"       content="${ogImage}" />
+<meta property="og:image:width"  content="1200" />
+<meta property="og:image:height" content="630" />
+${siteUrl ? `<meta property="og:url" content="${siteUrl}" />` : ""}
+
+<!-- Twitter / X Card -->
+<meta name="twitter:card"        content="summary_large_image" />
+<meta name="twitter:title"       content="${name}${title ? ` — ${title}` : ""}" />
+<meta name="twitter:description" content="${bio}" />
+<meta name="twitter:image"       content="${ogImage}" />
+
+<!-- JSON-LD structured data -->
+<script type="application/ld+json">${jsonLd}<\/script>`;
+}
+
 // ── Theme toggle ───────────────────────────────────────────────────────────────
 const themeToggle = `<button id="tt" onclick="tToggle()" aria-label="Toggle theme"
 style="position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;width:2.5rem;height:2.5rem;
@@ -205,7 +292,7 @@ function buildInk(data: PortfolioData): { html: string; css: string } {
 <head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>${esc(data.name)} — Portfolio</title>
-<meta name="description" content="${esc(data.bio || data.about || data.name + "'s portfolio")}" />
+${buildSeoHead(data)}
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 </head>
 <body class="ink-body">
@@ -293,7 +380,7 @@ function buildSheet(data: PortfolioData): { html: string; css: string } {
 <head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>${esc(data.name)} — Portfolio</title>
-<meta name="description" content="${esc(data.bio || data.about || data.name + "'s portfolio")}" />
+${buildSeoHead(data)}
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,300&display=swap" rel="stylesheet">
 </head>
 <body class="sh-body">
@@ -379,7 +466,7 @@ function buildMono(data: PortfolioData): { html: string; css: string } {
 <head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>${esc(data.name)} — Portfolio</title>
-<meta name="description" content="${esc(data.bio || data.about || data.name + "'s portfolio")}" />
+${buildSeoHead(data)}
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,600;0,700;1,300&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 </head>
 <body class="mo-body">
@@ -466,7 +553,7 @@ function buildRuled(data: PortfolioData): { html: string; css: string } {
 <head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>${esc(data.name)} — Portfolio</title>
-<meta name="description" content="${esc(data.bio || data.about || data.name + "'s portfolio")}" />
+${buildSeoHead(data)}
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:ital@0;1&display=swap" rel="stylesheet">
 </head>
 <body class="rl-body">
