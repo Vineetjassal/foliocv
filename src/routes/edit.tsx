@@ -8,6 +8,8 @@ import { screenshotUrl, pushPortfolioJson, extractUsername, deployToGitHubPages,
 import type { PortfolioData, Project, TemplateId } from "@/lib/types";
 import { toggleAppTheme, useAppTheme } from "./__root";
 import { SortableSectionList, type Section } from "@/components/SortableSectionList";
+import { HistoryPanel } from "@/components/HistoryPanel";
+import { PortfolioShareCard } from "@/components/PortfolioShareCard";
 
 export const Route = createFileRoute("/edit")({
   head: () => ({ meta: [{ title: "Editor — FolioCV" }] }),
@@ -53,6 +55,9 @@ const SHORTCUTS = [
   { key: "1", desc: "Design tab" },
   { key: "2", desc: "Content tab" },
   { key: "3", desc: "Projects tab" },
+  { key: "4", desc: "Deploy tab" },
+  { key: "5", desc: "History tab" },
+  { key: "6", desc: "Share tab" },
   { key: "T", desc: "Toggle preview theme" },
   { key: "↑↓", desc: "Change template (in Design tab)" },
   { key: "Ctrl+D", desc: "Download portfolio" },
@@ -593,8 +598,8 @@ function DeployPanel({ data, built }: { data: PortfolioData; built: { html: stri
 
 function Editor() {
   const navigate = useNavigate();
-  const { data, template, savedAt, patch, setTemplate, clearDraft } = useStore();
-  const [tab, setTab] = useState<"design" | "content" | "projects" | "deploy">("design");
+  const { data, template, savedAt, patch, setTemplate, clearDraft, restoreSnapshot } = useStore();
+  const [tab, setTab] = useState<"design" | "content" | "projects" | "deploy" | "history" | "share">("design");
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeTheme, setIframeTheme] = useState<"dark" | "light">("dark");
   const [deviceMode, setDeviceMode] = useState<DeviceMode>("desktop");
@@ -642,6 +647,8 @@ function Editor() {
       else if (e.key === "2") setTab("content");
       else if (e.key === "3") setTab("projects");
       else if (e.key === "4") setTab("deploy");
+      else if (e.key === "5") setTab("history");
+      else if (e.key === "6") setTab("share");
       else if (e.key === "t" || e.key === "T") setIframeTheme((t) => (t === "dark" ? "light" : "dark"));
       else if (e.key === "?") setShowShortcuts((v) => !v);
       else if ((e.ctrlKey || e.metaKey) && e.key === "d") { e.preventDefault(); handleDownload(); }
@@ -691,6 +698,10 @@ function Editor() {
   if (!data) return null;
 
   const device = DEVICE_CONFIG[deviceMode];
+
+  // Tab labels for sidebar — split into two rows to keep them readable
+  const TAB_ROW1 = ["design", "content", "projects"] as const;
+  const TAB_ROW2 = ["deploy", "history", "share"] as const;
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
@@ -768,19 +779,36 @@ function Editor() {
       <div className="flex flex-1 overflow-hidden">
         {/* ── Sidebar ── */}
         <aside className="flex w-[380px] shrink-0 flex-col border-r border-border bg-card">
-          <div className="flex border-b border-border text-xs">
-            {(["design", "content", "projects", "deploy"] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`flex-1 py-3 capitalize transition ${
-                  tab === t ? "bg-background text-foreground" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {t}
-              </button>
-            ))}
+          {/* Tab bar — two rows of 3 */}
+          <div className="border-b border-border text-xs">
+            <div className="flex">
+              {TAB_ROW1.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTab(t)}
+                  className={`flex-1 py-2.5 capitalize transition ${
+                    tab === t ? "bg-background text-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+            <div className="flex border-t border-border/60">
+              {TAB_ROW2.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTab(t)}
+                  className={`flex-1 py-2.5 capitalize transition ${
+                    tab === t ? "bg-background text-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
           </div>
+
           <div className="flex-1 overflow-y-auto p-5">
             {tab === "design" && (
               <div className="space-y-3">
@@ -823,6 +851,31 @@ function Editor() {
             {tab === "content" && <ContentPanel data={data} patch={patch} />}
             {tab === "projects" && <ProjectsPanel data={data} patch={patch} />}
             {tab === "deploy" && <DeployPanel data={data} built={built} />}
+            {tab === "history" && (
+              <HistoryPanel
+                data={data}
+                template={template}
+                onRestore={(snap) => {
+                  restoreSnapshot(snap);
+                  setTab("design");
+                }}
+              />
+            )}
+            {tab === "share" && (
+              <div className="space-y-4">
+                <div>
+                  <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Share Portfolio</div>
+                  <p className="mt-1 text-[10px] text-muted-foreground leading-relaxed">
+                    Share your portfolio link or post it directly to social media.
+                  </p>
+                </div>
+                <PortfolioShareCard
+                  userName={data.name || "Your Portfolio"}
+                  title={data.title ? `${data.title}${data.bio ? " · " + data.bio : ""}` : (data.bio || "Check out my portfolio!")}
+                  portfolioUrl={data.website || window.location.href}
+                />
+              </div>
+            )}
           </div>
           <BondrAd />
         </aside>
