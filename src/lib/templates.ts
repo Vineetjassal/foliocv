@@ -830,10 +830,16 @@ export function buildSite(data: PortfolioData, template: TemplateId): { html: st
     case "minimal":   result = buildMono(data);  break;
     default:          result = buildCentered(data);
   }
-  // Inject accent CSS variable into the generated HTML
+
+  // ── FIX: inject the full CSS into the HTML <head> as a <style> block ──────
+  // Previously buildSite() returned css separately and generatePortfolioHtml()
+  // only used result.html, silently discarding all layout styles.
+  // The accent variable override must come AFTER the CSS so it wins specificity.
+  const styleTag = `<style>${result.css}</style>`;
   const accentInject = `<style>:root,[data-theme="light"],[data-theme="dark"]{--accent-user:${accent};}</style>`;
+
   return {
-    html: result.html.replace("</head>", accentInject + "\n</head>"),
+    html: result.html.replace("</head>", styleTag + "\n" + accentInject + "\n</head>"),
     css: result.css,
   };
 }
