@@ -70,7 +70,6 @@ export default function EditPage() {
   const clearDraft = useStore((s) => s.clearDraft);
 
   const [local, setLocal] = useState<PortfolioData | null>(null);
-  const [saved, setSaved] = useState(false);
   const [newSkill, setNewSkill] = useState("");
 
   useEffect(() => {
@@ -93,11 +92,10 @@ export default function EditPage() {
     setLocal((prev) => prev ? { ...prev, [key]: value } : prev);
   }
 
-  function handleSave() {
+  function handleSaveAndPreview() {
     if (!local) return;
     patch(local);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    navigate({ to: "/preview" });
   }
 
   function handleStartOver() {
@@ -175,10 +173,10 @@ export default function EditPage() {
             Start over
           </button>
           <button
-            onClick={handleSave}
+            onClick={handleSaveAndPreview}
             className="rounded-full bg-foreground px-5 py-1.5 text-xs font-medium text-background hover:opacity-90 transition-opacity"
           >
-            {saved ? "✓ Saved" : "Save changes"}
+            Save & preview →
           </button>
         </div>
       </header>
@@ -335,13 +333,13 @@ export default function EditPage() {
           </SectionCard>
         )}
 
-        {/* Save CTA */}
+        {/* Save & Preview CTA */}
         <div className="flex flex-col gap-3 pt-2 sm:flex-row">
           <button
-            onClick={handleSave}
+            onClick={handleSaveAndPreview}
             className="flex-1 rounded-full bg-foreground py-4 text-sm font-medium text-background hover:opacity-90 transition-opacity"
           >
-            {saved ? "✓ Saved!" : "Save & preview →"}
+            Save & preview →
           </button>
           <button
             onClick={handleStartOver}
