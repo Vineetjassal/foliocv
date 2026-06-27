@@ -20,6 +20,13 @@ export interface Project {
   include?: boolean;
 }
 
+/** A custom section added by the user via the Custom Section Builder */
+export interface CustomSection {
+  id: string;      // unique id, e.g. "custom_1719481200000"
+  label: string;   // display title, e.g. "Publications"
+  content: string; // free-text body (• bullets and blank-line paragraphs)
+}
+
 export interface PortfolioData {
   name: string;
   title: string;
@@ -55,4 +62,13 @@ export interface PortfolioData {
    * h-index, and i10-index on the portfolio.
    */
   scholarId?: string;
+  /**
+   * Ordered list of section IDs controlling render order in the portfolio preview.
+   * Built-in IDs: "hero" | "skills" | "experience" | "projects" | "education" | "links"
+   * Custom sections use their own id (e.g. "custom_1719481200000").
+   * When undefined, the default order is used.
+   */
+  sectionOrder?: string[];
+  /** User-defined custom sections with a label and free-text content */
+  customSections?: CustomSection[];
 }

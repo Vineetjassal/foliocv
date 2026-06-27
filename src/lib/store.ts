@@ -6,6 +6,16 @@ export const STORE_KEY = "foliocv_store";
 export const HISTORY_KEY = "foliocv_history";
 export const MAX_SNAPSHOTS = 10;
 
+/** The canonical default section order used when none is persisted */
+export const DEFAULT_SECTION_ORDER: string[] = [
+  "hero",
+  "skills",
+  "experience",
+  "projects",
+  "education",
+  "links",
+];
+
 export interface Snapshot {
   id: string;
   label: string;
@@ -33,6 +43,8 @@ export const emptyPortfolio: PortfolioData = {
   githubSync: false,
   accentColor: "#7c3aed",
   fontFamily: "inter",
+  sectionOrder: [...DEFAULT_SECTION_ORDER],
+  customSections: [],
 };
 
 // ── History helpers (pure localStorage, outside Zustand) ─────────────────────
