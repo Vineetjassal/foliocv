@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { Logo } from "@/components/Logo";
 import type { PortfolioData, TemplateId } from "@/lib/types";
@@ -131,29 +131,38 @@ export default function EditPage() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ── 1. Initialise local state from store on first mount only ──────────────
+  //    DO NOT also call setPreviewHtml here — the effect below is the single
+  //    source of truth so edits always trigger a fresh render.
   useEffect(() => {
     if (!storeData) {
       navigate({ to: "/create" });
       return;
     }
-    setLocal(storeData);
-    setPreviewHtml(generatePortfolioHtml(storeData, template));
+    setLocal((prev) => (prev === null ? storeData : prev));
   }, [storeData, navigate]);
 
-  // Debounced live preview refresh
-  const refreshPreview = useCallback(
-    (data: PortfolioData, tpl: TemplateId) => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => {
-        setPreviewHtml(generatePortfolioHtml(data, tpl));
-      }, 350);
-    },
-    []
-  );
+  // ── 2. Re-render preview whenever local data or template changes ──────────
+  //    Keep the debounce timer in a ref so this effect never needs to be
+  //    re-created and never captures a stale closure over `local` / `template`.
+  const localRef = useRef<PortfolioData | null>(null);
+  const templateRef = useRef<TemplateId>(template);
+  localRef.current = local;
+  templateRef.current = template;
 
   useEffect(() => {
-    if (local) refreshPreview(local, template);
-  }, [local, template, refreshPreview]);
+    if (!local) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      // Read from refs so the callback is never stale
+      if (localRef.current && templateRef.current) {
+        setPreviewHtml(generatePortfolioHtml(localRef.current, templateRef.current));
+      }
+    }, 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [local, template]);
 
   if (!local) {
     return (
