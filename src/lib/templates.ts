@@ -319,6 +319,11 @@ function buildCentered(data: PortfolioData): { html: string; css: string } {
   };
   const centSections = renderOrderedSections(data, centRenderers, "cent");
 
+  // Only show about paragraph if it has distinct content from bio
+  const bioText = data.bio?.trim() ?? "";
+  const aboutText = data.about?.trim() ?? "";
+  const showAbout = aboutText && aboutText !== bioText;
+
   const html = `<!DOCTYPE html>
 <html lang="en" data-theme="dark"${data.accentColor ? ` data-accent="${esc(data.accentColor)}"` : ""}>
 <head>
@@ -329,7 +334,7 @@ ${accentStyle(data)}
 ${fontLink(data)}
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 </head>
-<body class="cent-body">
+<body class="cent-body" style="background:#111110;color:#f0f0ed;">
 
 ${buildLoader(data.name)}
 ${buildNav(data.name)}
@@ -343,10 +348,10 @@ ${buildNav(data.name)}
       ${data.location ? `<div class="cent-loc">${esc(data.location)}</div>` : ""}
       <div class="cent-links">${socialLinks(data)}</div>
     </header>
-    ${data.bio || data.about ? `
+    ${bioText || showAbout ? `
     <section class="cent-sec cent-bio sr">
-      ${data.bio ? `<p class="cent-lead">${esc(data.bio)}</p>` : ""}
-      ${data.about ? `<p class="cent-body">${esc(data.about)}</p>` : ""}
+      ${bioText ? `<p class="cent-lead">${esc(bioText)}</p>` : ""}
+      ${showAbout ? `<p class="cent-body-text">${esc(aboutText)}</p>` : ""}
     </section>` : ""}
     ${gallery}
     ${centSections}
@@ -372,7 +377,7 @@ ${scrollRevealScript}
 .cent-sec{margin-bottom:2rem;}
 .cent-bio{border-bottom:1px solid var(--line);padding-bottom:2rem;margin-bottom:2rem;}
 .cent-lead{font-size:1.05rem;line-height:1.75;color:var(--text-secondary);margin-bottom:.75rem;}
-.cent-body{font-size:.9rem;line-height:1.8;color:var(--text-muted);}
+.cent-body-text{font-size:.9rem;line-height:1.8;color:var(--text-muted);}
 .cent-badges{display:flex;flex-wrap:wrap;gap:.3rem;}
 .cent-pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem;margin-top:.5rem;}
 .cent-links-extra{display:flex;flex-wrap:wrap;gap:.5rem;}
@@ -403,7 +408,7 @@ ${buildSeoHead(data)}
 ${accentStyle(data)}
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 </head>
-<body class="ink-body">
+<body class="ink-body" style="background:#111110;color:#f0f0ed;">
 
 ${buildLoader(data.name)}
 ${buildNav(data.name)}
@@ -420,7 +425,7 @@ ${buildNav(data.name)}
     <div class="ink-lead-row" id="about">
       <div class="ink-lead-main">
         ${data.bio ? `<p class="ink-drop-cap">${esc(data.bio)}</p>` : ""}
-        ${data.about ? `<p class="ink-body-copy">${esc(data.about)}</p>` : ""}
+        ${data.about && data.about.trim() !== data.bio?.trim() ? `<p class="ink-body-copy">${esc(data.about)}</p>` : ""}
       </div>
       <aside class="ink-lead-aside">
         ${data.avatar ? `<figure class="ink-fig">
@@ -496,6 +501,9 @@ function buildSheet(data: PortfolioData): { html: string; css: string } {
   };
   const shSections = renderOrderedSections(data, shRenderers, "sh");
 
+  // In split layout, bio is shown in sidebar — only show about in main if it differs
+  const showAboutInMain = data.about?.trim() && data.about.trim() !== data.bio?.trim();
+
   const html = `<!DOCTYPE html>
 <html lang="en" data-theme="dark"${data.accentColor ? ` data-accent="${esc(data.accentColor)}"` : ""}>
 <head>
@@ -505,7 +513,7 @@ ${buildSeoHead(data)}
 ${accentStyle(data)}
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,300&display=swap" rel="stylesheet">
 </head>
-<body class="sh-body">
+<body class="sh-body" style="background:#111110;color:#f0f0ed;">
 
 ${buildLoader(data.name)}
 ${buildNav(data.name)}
@@ -527,7 +535,7 @@ ${buildNav(data.name)}
     </aside>
     <main class="sh-main" id="project">
       ${gallery}
-      ${data.about ? `
+      ${showAboutInMain ? `
       <section class="sh-sec sr">
         <h2 class="sec-label">About</h2>
         <p class="sh-text">${esc(data.about)}</p>
@@ -609,6 +617,10 @@ function buildMono(data: PortfolioData): { html: string; css: string } {
   };
   const moSections = renderOrderedSections(data, moRenderers, "mo");
 
+  const bioText = data.bio?.trim() ?? "";
+  const aboutText = data.about?.trim() ?? "";
+  const showAbout = aboutText && aboutText !== bioText;
+
   const html = `<!DOCTYPE html>
 <html lang="en" data-theme="dark"${data.accentColor ? ` data-accent="${esc(data.accentColor)}"` : ""}>
 <head>
@@ -618,7 +630,7 @@ ${buildSeoHead(data)}
 ${accentStyle(data)}
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,600;0,700;1,300&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 </head>
-<body class="mo-body">
+<body class="mo-body" style="background:#111110;color:#f0f0ed;">
 
 ${buildLoader(data.name)}
 ${buildNav(data.name)}
@@ -637,11 +649,11 @@ ${buildNav(data.name)}
 
     ${gallery}
 
-    ${data.bio || data.about ? `
+    ${bioText || showAbout ? `
     <section class="mo-sec sr">
       <div class="mo-sec-label">about</div>
-      ${data.bio ? `<p class="mo-bio">${esc(data.bio)}</p>` : ""}
-      ${data.about ? `<p class="mo-text">${esc(data.about)}</p>` : ""}
+      ${bioText ? `<p class="mo-bio">${esc(bioText)}</p>` : ""}
+      ${showAbout ? `<p class="mo-text">${esc(aboutText)}</p>` : ""}
     </section>` : ""}
 
     ${moSections}
@@ -723,7 +735,7 @@ ${buildSeoHead(data)}
 ${accentStyle(data)}
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:ital@0;1&display=swap" rel="stylesheet">
 </head>
-<body class="rl-body">
+<body class="rl-body" style="background:#111110;color:#f0f0ed;">
 
 ${buildLoader(data.name)}
 ${buildNav(data.name)}
@@ -751,7 +763,7 @@ ${buildNav(data.name)}
 
     ${gallery}
 
-    ${data.about ? `
+    ${data.about && data.about.trim() !== data.bio?.trim() ? `
     <div class="rl-row sr sr-d1">
       <div class="rl-row-label">about</div>
       <div class="rl-row-content rl-wide"><p class="rl-text">${esc(data.about)}</p></div>
