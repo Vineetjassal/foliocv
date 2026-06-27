@@ -800,3 +800,11 @@ export function buildSite(data: PortfolioData, template: TemplateId): { html: st
     css: result.css,
   };
 }
+
+/**
+ * generatePortfolioHtml — convenience wrapper used by the /preview route.
+ * Returns the complete self-contained HTML string for the portfolio.
+ */
+export function generatePortfolioHtml(data: PortfolioData, template: TemplateId): string {
+  return buildSite(data, template).html;
+}
