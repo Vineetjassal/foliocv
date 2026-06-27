@@ -13,11 +13,11 @@ const faqs = [
   },
   {
     q: "What format does the JSON need to be?",
-    a: "We support the popular jsonresume.org schema out-of-the-box. You can also download our simple flat template if you’re starting from scratch.",
+    a: "We support the popular jsonresume.org schema out-of-the-box. You can also download our simple flat template if you're starting from scratch.",
   },
   {
     q: "How are my GitHub projects shown?",
-    a: "FolioCV fetches your top public repositories and takes a live screenshot of each project’s deployed site. No more generic GitHub social previews.",
+    a: "FolioCV fetches your top public repositories and takes a live screenshot of each project's deployed site. No more generic GitHub social previews.",
   },
   {
     q: "Can I edit the portfolio after generating?",
@@ -29,7 +29,7 @@ const faqs = [
   },
   {
     q: "Does it support dark mode?",
-    a: "Every generated portfolio ships with a light/dark toggle that respects the visitor’s system preference.",
+    a: "Every generated portfolio ships with a light/dark toggle that respects the visitor's system preference.",
   },
 ];
 
@@ -151,50 +151,52 @@ function Landing() {
       {/* Mobile fullscreen menu */}
       <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
 
-      {/* HEADER */}
-      <header className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-5 py-4 sm:px-10 sm:py-5">
-        <div className="flex items-center gap-2 m-fade">
-          <Logo size={36} />
-          <span className="font-serif text-lg sm:text-xl tracking-tight">FolioCV</span>
-        </div>
+      {/* HEADER — full-width bar, inner content capped & centered */}
+      <header className="absolute inset-x-0 top-0 z-10 flex justify-center px-5 py-4 sm:px-6 sm:py-5">
+        <div className="flex w-full max-w-4xl items-center justify-between">
+          <div className="flex items-center gap-2 m-fade">
+            <Logo size={36} />
+            <span className="font-serif text-lg sm:text-xl tracking-tight">FolioCV</span>
+          </div>
 
-        {/* Desktop nav */}
-        <nav className="hidden sm:flex items-center gap-2 text-sm m-fade">
-          <Link
-            to="/showcase"
-            className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors text-sm"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
-              <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
-            </svg>
-            Showcase
-          </Link>
-          <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
-            <GitHubIcon size={15} />GitHub
-          </a>
-          <Link to="/create"
-            className="ml-3 rounded-full bg-foreground px-4 py-1.5 text-sm font-medium text-background hover:opacity-90 transition-opacity">
-            Start free
-          </Link>
-        </nav>
+          {/* Desktop nav */}
+          <nav className="hidden sm:flex items-center gap-2 text-sm m-fade">
+            <Link
+              to="/showcase"
+              className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors text-sm"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+              </svg>
+              Showcase
+            </Link>
+            <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
+              <GitHubIcon size={15} />GitHub
+            </a>
+            <Link to="/create"
+              className="ml-3 rounded-full bg-foreground px-4 py-1.5 text-sm font-medium text-background hover:opacity-90 transition-opacity">
+              Start free
+            </Link>
+          </nav>
 
-        {/* Mobile: Start free + hamburger */}
-        <div className="flex sm:hidden items-center gap-2 m-fade">
-          <Link to="/create"
-            className="rounded-full bg-foreground px-4 py-1.5 text-xs font-medium text-background hover:opacity-90 transition-opacity">
-            Start free
-          </Link>
-          <button
-            onClick={() => setMenuOpen(true)}
-            aria-label="Open menu"
-            className="p-2 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <path d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
+          {/* Mobile: Start free + hamburger */}
+          <div className="flex sm:hidden items-center gap-2 m-fade">
+            <Link to="/create"
+              className="rounded-full bg-foreground px-4 py-1.5 text-xs font-medium text-background hover:opacity-90 transition-opacity">
+              Start free
+            </Link>
+            <button
+              onClick={() => setMenuOpen(true)}
+              aria-label="Open menu"
+              className="p-2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -423,7 +425,7 @@ function Landing() {
           </div>
           <div className="scroll-reveal grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-8">
             {[
-              { title: "100% private", body: "Everything runs in your browser. Your data never touches our servers. We don’t have servers." },
+              { title: "100% private", body: "Everything runs in your browser. Your data never touches our servers. We don't have servers." },
               { title: "Live site screenshots", body: "Projects show real screenshots of your deployed sites — not GitHub social previews." },
               { title: "Yours to own", body: "Download clean HTML/CSS/JS with no runtime dependencies, frameworks, or build steps." },
               { title: "jsonresume.org compatible", body: "Already have a JSON resume? Drop it in. FolioCV parses the standard schema automatically." },
@@ -494,7 +496,7 @@ function Landing() {
           <div className="scroll-reveal">
             <h2 className="font-serif text-4xl sm:text-6xl text-balance">Your portfolio,<br />in five minutes.</h2>
             <p className="mt-5 text-muted-foreground max-w-md mx-auto text-sm sm:text-base sm:mt-6">
-              No account. No templates to pay for. Just a quiet, beautiful portfolio that’s entirely yours.
+              No account. No templates to pay for. Just a quiet, beautiful portfolio that's entirely yours.
             </p>
             <Link to="/create"
               className="mt-8 inline-block rounded-full bg-foreground px-10 py-4 text-sm font-medium text-background transition-transform hover:scale-[1.02] active:scale-[0.98] sm:mt-10">
