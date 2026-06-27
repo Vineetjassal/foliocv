@@ -125,7 +125,7 @@ body{min-height:100dvh;}
   --accent-bg:color-mix(in oklab,var(--accent) 12%,transparent);
 }
 
-body{background:var(--bg);color:var(--text-primary);}
+body{background:var(--bg);color:var(--text-primary);transition:background .3s,color .3s;}
 
 /* ── Accent injection ── */
 :root{--accent-user:inherit;}
@@ -207,13 +207,13 @@ body{background:var(--bg);color:var(--text-primary);}
 .fc-typing::after{content:'|';animation:blink .9s step-end infinite;margin-left:.05em;color:var(--accent);}
 
 /* ── Scroll reveal ── */
-.sr{opacity:0;transform:translateY(18px);}
+.sr{opacity:0;transform:translateY(18px);transition:opacity .55s cubic-bezier(.16,1,.3,1),transform .55s cubic-bezier(.16,1,.3,1);}
 .sr-d1{transition-delay:.05s!important;}
 .sr-d2{transition-delay:.1s!important;}
 .sr-d3{transition-delay:.15s!important;}
 .sr-d4{transition-delay:.2s!important;}
 .sr-d5{transition-delay:.25s!important;}
-.sr.visible{opacity:1;transform:none;transition:opacity .55s cubic-bezier(.16,1,.3,1),transform .55s cubic-bezier(.16,1,.3,1);}
+.sr.sr-visible{opacity:1;transform:none;}
 
 /* ── Keyframes ── */
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
@@ -229,15 +229,40 @@ body{background:var(--bg);color:var(--text-primary);}
 @keyframes loaderOut{to{opacity:0;pointer-events:none}}
 `;
 
-const themeToggle = `<button class="theme-btn fixed-theme-btn" onclick="(function(){const h=document.documentElement;const t=h.getAttribute('data-theme')==='dark'?'light':'dark';h.setAttribute('data-theme',t);this.textContent=t==='dark'?'☀ Light':'☾ Dark';}).call(this)" aria-label="Toggle theme">☾ Dark</button>`;
+// ── Theme toggle — starts showing ☀ Light because page opens in dark mode ──
+const themeToggle = `<button class="theme-btn fixed-theme-btn" id="tt" aria-label="Toggle theme">☀ Light</button>
+<script>
+(function(){
+  var btn=document.getElementById('tt');
+  var html=document.documentElement;
+  function apply(t){
+    html.setAttribute('data-theme',t);
+    btn.textContent=t==='dark'?'☀ Light':'☾ Dark';
+  }
+  btn.addEventListener('click',function(){apply(html.getAttribute('data-theme')==='dark'?'light':'dark');});
+  // Respect system preference only if user hasn't set a saved pref
+  try{
+    var saved=localStorage.getItem('folio-theme');
+    if(saved){apply(saved);return;}
+  }catch(e){}
+  // Default: dark
+  apply('dark');
+  // Watch for changes and persist
+  new MutationObserver(function(){
+    try{localStorage.setItem('folio-theme',html.getAttribute('data-theme'));}catch(e){}
+  }).observe(html,{attributes:true,attributeFilter:['data-theme']});
+})();
+<\/script>`;
 
 const scrollRevealScript = `<script>
 (function(){
   const els=document.querySelectorAll('.sr');
-  const io=new IntersectionObserver((entries)=>{
-    entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');io.unobserve(e.target);}});
+  const io=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){e.target.classList.add('sr-visible');io.unobserve(e.target);}
+    });
   },{threshold:.1});
-  els.forEach(el=>io.observe(el));
+  els.forEach(function(el){io.observe(el);});
   // Accent color injection
   const accent=document.documentElement.dataset.accent;
   if(accent){document.documentElement.style.setProperty('--accent-user',accent);}
@@ -272,20 +297,30 @@ function fontLink(data: PortfolioData): string {
   return data.fontFamily && FONT_LINKS[data.fontFamily] ? FONT_LINKS[data.fontFamily] : "";
 }
 
+function buildNav(name: string): string {
+  return `<nav class="fc-nav">
+  <a class="fc-nav-brand" href="#home">${esc(name) || "Portfolio"}</a>
+  <div class="fc-nav-links">
+    <a href="#about">About</a>
+    <a href="#project">Work</a>
+  </div>
+</nav>`;
+}
+
 // ── Centered/Quiet (template: "centered") ────────────────────────────────────
 function buildCentered(data: PortfolioData): { html: string; css: string } {
   const gallery = data.galleryImages?.length ? gallerySection(data.galleryImages) : "";
   const centRenderers: Record<string, (d: PortfolioData) => string> = {
     skills:     (d) => d.skills?.length ? `<section class="cent-sec sr"><h2 class="sec-label">Skills</h2><div class="cent-badges">${skillBadges(d.skills)}</div></section>` : "",
     experience: (d) => d.experience?.length ? `<section class="cent-sec sr sr-d1"><h2 class="sec-label">Experience</h2>${expItems(d)}</section>` : "",
-    projects:   (d) => d.projects?.filter(p => p.include !== false).length ? `<section class="cent-sec sr sr-d2"><h2 class="sec-label">Projects</h2><div class="cent-pgrid">${projectCards(d)}</div></section>` : "",
+    projects:   (d) => d.projects?.filter(p => p.include !== false).length ? `<section class="cent-sec sr sr-d2" id="project"><h2 class="sec-label">Projects</h2><div class="cent-pgrid">${projectCards(d)}</div></section>` : "",
     education:  (d) => d.education?.length ? `<section class="cent-sec sr sr-d3"><h2 class="sec-label">Education</h2>${eduItems(d)}</section>` : "",
     links:      (d) => d.links?.length ? `<section class="cent-sec sr"><h2 class="sec-label">Links</h2><div class="cent-links-extra">${socialLinks(d)}</div></section>` : "",
   };
   const centSections = renderOrderedSections(data, centRenderers, "cent");
 
   const html = `<!DOCTYPE html>
-<html lang="en" data-theme="light"${data.accentColor ? ` data-accent="${esc(data.accentColor)}"` : ""}>
+<html lang="en" data-theme="dark"${data.accentColor ? ` data-accent="${esc(data.accentColor)}"` : ""}>
 <head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>${esc(data.name)} — Portfolio</title>
@@ -345,16 +380,6 @@ ${scrollRevealScript}
   return { html, css };
 }
 
-function buildNav(name: string): string {
-  return `<nav class="fc-nav">
-  <a class="fc-nav-brand" href="#home">${esc(name) || "Portfolio"}</a>
-  <div class="fc-nav-links">
-    <a href="#about">About</a>
-    <a href="#project">Work</a>
-  </div>
-</nav>`;
-}
-
 // ════════════════════════════════════════════════════════════════════════════════
 // 1. INK — Editorial newspaper  (template: "editorial")
 // ════════════════════════════════════════════════════════════════════════════════
@@ -363,14 +388,14 @@ function buildInk(data: PortfolioData): { html: string; css: string } {
   const inkRenderers: Record<string, (d: PortfolioData) => string> = {
     skills:     (d) => d.skills?.length ? `<section class="ink-sec sr"><h2 class="sec-label">Skills</h2><div class="ink-badges">${skillBadges(d.skills)}</div></section>` : "",
     experience: (d) => d.experience?.length ? `<section class="ink-sec sr sr-d1"><h2 class="sec-label">Experience</h2>${expItems(d)}</section>` : "",
-    projects:   (d) => d.projects?.filter(p => p.include !== false).length ? `<section class="ink-sec sr sr-d2"><h2 class="sec-label">Projects</h2><div class="ink-pgrid">${projectCards(d)}</div></section>` : "",
+    projects:   (d) => d.projects?.filter(p => p.include !== false).length ? `<section class="ink-sec sr sr-d2" id="project"><h2 class="sec-label">Projects</h2><div class="ink-pgrid">${projectCards(d)}</div></section>` : "",
     education:  (d) => d.education?.length ? `<section class="ink-sec sr sr-d3"><h2 class="sec-label">Education</h2>${eduItems(d)}</section>` : "",
     links:      (d) => d.links?.length ? `<section class="ink-sec sr"><h2 class="sec-label">Links</h2><div class="ink-links-extra">${socialLinks(d)}</div></section>` : "",
   };
   const inkSections = renderOrderedSections(data, inkRenderers, "ink");
 
   const html = `<!DOCTYPE html>
-<html lang="en" data-theme="light"${data.accentColor ? ` data-accent="${esc(data.accentColor)}"` : ""}>
+<html lang="en" data-theme="dark"${data.accentColor ? ` data-accent="${esc(data.accentColor)}"` : ""}>
 <head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>${esc(data.name)} — Portfolio</title>
@@ -465,14 +490,14 @@ function buildSheet(data: PortfolioData): { html: string; css: string } {
   const shRenderers: Record<string, (d: PortfolioData) => string> = {
     skills:     (d) => d.skills?.length ? `<section class="sh-sec sr"><h2 class="sec-label">Skills</h2><div class="sh-badges">${skillBadges(d.skills)}</div></section>` : "",
     experience: (d) => d.experience?.length ? `<section class="sh-sec sr sr-d1"><h2 class="sec-label">Experience</h2>${expItems(d)}</section>` : "",
-    projects:   (d) => d.projects?.filter(p => p.include !== false).length ? `<section class="sh-sec sr sr-d2"><h2 class="sec-label">Projects</h2><div class="sh-pgrid">${projectCards(d)}</div></section>` : "",
+    projects:   (d) => d.projects?.filter(p => p.include !== false).length ? `<section class="sh-sec sr sr-d2" id="project"><h2 class="sec-label">Projects</h2><div class="sh-pgrid">${projectCards(d)}</div></section>` : "",
     education:  (d) => d.education?.length ? `<section class="sh-sec sr sr-d3"><h2 class="sec-label">Education</h2>${eduItems(d)}</section>` : "",
     links:      (d) => d.links?.length ? `<section class="sh-sec sr"><h2 class="sec-label">Links</h2><div class="sh-links-extra">${socialLinks(d)}</div></section>` : "",
   };
   const shSections = renderOrderedSections(data, shRenderers, "sh");
 
   const html = `<!DOCTYPE html>
-<html lang="en" data-theme="light"${data.accentColor ? ` data-accent="${esc(data.accentColor)}"` : ""}>
+<html lang="en" data-theme="dark"${data.accentColor ? ` data-accent="${esc(data.accentColor)}"` : ""}>
 <head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>${esc(data.name)} — Portfolio</title>
@@ -585,7 +610,7 @@ function buildMono(data: PortfolioData): { html: string; css: string } {
   const moSections = renderOrderedSections(data, moRenderers, "mo");
 
   const html = `<!DOCTYPE html>
-<html lang="en" data-theme="light"${data.accentColor ? ` data-accent="${esc(data.accentColor)}"` : ""}>
+<html lang="en" data-theme="dark"${data.accentColor ? ` data-accent="${esc(data.accentColor)}"` : ""}>
 <head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>${esc(data.name)} — Portfolio</title>
@@ -676,7 +701,7 @@ ${scrollRevealScript}
 }
 
 // ════════════════════════════════════════════════════════════════════════════════
-// 4. RULED — Structured ruled layout  (template: "centered" alias "ruled")
+// 4. RULED — Structured ruled layout  (template: "ruled")
 // ════════════════════════════════════════════════════════════════════════════════
 function buildRuled(data: PortfolioData): { html: string; css: string } {
   const gallery = data.galleryImages?.length ? gallerySection(data.galleryImages) : "";
@@ -690,7 +715,7 @@ function buildRuled(data: PortfolioData): { html: string; css: string } {
   const rlSections = renderOrderedSections(data, rlRenderers, "rl");
 
   const html = `<!DOCTYPE html>
-<html lang="en" data-theme="light"${data.accentColor ? ` data-accent="${esc(data.accentColor)}"` : ""}>
+<html lang="en" data-theme="dark"${data.accentColor ? ` data-accent="${esc(data.accentColor)}"` : ""}>
 <head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>${esc(data.name)} — Portfolio</title>
