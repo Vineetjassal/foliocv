@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/Logo";
+import { toggleAppTheme, useAppTheme } from "./__root";
 
 export const Route = createFileRoute("/")({ component: Landing });
 
@@ -60,6 +61,48 @@ function GitHubIcon({ size = 16 }: { size?: number }) {
   );
 }
 
+/** Sun icon for light mode */
+function SunIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="12" cy="12" r="5" />
+      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+    </svg>
+  );
+}
+
+/** Moon icon for dark mode */
+function MoonIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </svg>
+  );
+}
+
+/** Vercel logo icon */
+function VercelIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M24 22.525H0l12-21.05 12 21.05z" />
+    </svg>
+  );
+}
+
+function ThemeToggleButton({ className = "" }: { className?: string }) {
+  const theme = useAppTheme();
+  return (
+    <button
+      type="button"
+      onClick={toggleAppTheme}
+      aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+      className={`inline-flex items-center justify-center rounded-full border border-border p-2 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors ${className}`}
+    >
+      {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+    </button>
+  );
+}
+
 function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
   if (!open) return null;
   return (
@@ -69,11 +112,14 @@ function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
           <Logo size={36} />
           <span className="font-serif text-lg tracking-tight">FolioCV</span>
         </div>
-        <button onClick={onClose} aria-label="Close menu" className="p-2 text-muted-foreground hover:text-foreground transition-colors">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M18 6L6 18M6 6l12 12" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-2">
+          <ThemeToggleButton />
+          <button onClick={onClose} aria-label="Close menu" className="p-2 text-muted-foreground hover:text-foreground transition-colors">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </div>
       <nav className="flex flex-col items-start gap-6 px-8 pt-8 text-lg">
         <Link to="/showcase" onClick={onClose} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
@@ -83,6 +129,12 @@ function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
           </svg>
           Showcase
         </Link>
+        <a href="#deploy" onClick={onClose} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
+          </svg>
+          Deploy
+        </a>
         <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" onClick={onClose}
           className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
           <GitHubIcon size={16} />GitHub
@@ -151,7 +203,7 @@ function Landing() {
       {/* Mobile fullscreen menu */}
       <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
 
-      {/* HEADER — full-width bar, inner content capped & centered */}
+      {/* HEADER */}
       <header className="absolute inset-x-0 top-0 z-10 flex justify-center px-5 py-4 sm:px-6 sm:py-5">
         <div className="flex w-full max-w-4xl items-center justify-between">
           <div className="flex items-center gap-2 m-fade">
@@ -171,17 +223,28 @@ function Landing() {
               </svg>
               Showcase
             </Link>
+            <a
+              href="#deploy"
+              className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors text-sm"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
+              </svg>
+              Deploy
+            </a>
             <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
               <GitHubIcon size={15} />GitHub
             </a>
+            {/* Dark / Light toggle */}
+            <ThemeToggleButton className="ml-1" />
             <Link to="/create"
-              className="ml-3 rounded-full bg-foreground px-4 py-1.5 text-sm font-medium text-background hover:opacity-90 transition-opacity">
+              className="ml-2 rounded-full bg-foreground px-4 py-1.5 text-sm font-medium text-background hover:opacity-90 transition-opacity">
               Start free
             </Link>
           </nav>
 
-          {/* Mobile: Start free + hamburger */}
+          {/* Mobile: theme toggle + Start free + hamburger */}
           <div className="flex sm:hidden items-center gap-2 m-fade">
             <Link to="/create"
               className="rounded-full bg-foreground px-4 py-1.5 text-xs font-medium text-background hover:opacity-90 transition-opacity">
@@ -230,7 +293,6 @@ function Landing() {
           you can tweak inline and download as plain HTML.
         </p>
 
-        {/* CTA buttons — stacked on mobile, row on desktop */}
         <div className="m-fade mt-8 flex flex-col items-stretch w-full max-w-xs gap-3 sm:max-w-none sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-3 sm:mt-10">
           <Link to="/create"
             className="rounded-full bg-foreground px-8 py-3.5 text-sm font-medium text-background text-center transition-transform hover:scale-[1.02] active:scale-[0.98]">
@@ -254,7 +316,6 @@ function Landing() {
           </a>
         </div>
 
-        {/* Feature pills */}
         <div className="m-fade mt-10 flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground sm:gap-6">
           {["No account needed", "100% browser-based", "Download clean code", "Dark mode included"].map((f) => (
             <span key={f} className="flex items-center gap-1.5">
@@ -266,7 +327,6 @@ function Landing() {
           ))}
         </div>
 
-        {/* Peerlist badge */}
         <div className="m-fade mt-10 flex justify-center w-full overflow-hidden">
           <a href="https://peerlist.io/vineetjassal/project/foliocv--resume-to-portfolio-in-seconds" target="_blank" rel="noopener noreferrer"
             className="max-w-full">
@@ -300,6 +360,136 @@ function Landing() {
               <p className="text-sm text-muted-foreground leading-relaxed">{s.d}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* DEPLOY SECTION */}
+      <section id="deploy" className="border-t border-border">
+        <div className="mx-auto max-w-4xl px-5 py-20 sm:px-6 sm:py-32">
+          <div className="scroll-reveal mb-10 text-center sm:mb-14">
+            <div className="mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">One-click hosting</div>
+            <h2 className="font-serif text-3xl sm:text-5xl">Deploy anywhere</h2>
+            <p className="mt-4 text-muted-foreground max-w-md mx-auto text-sm sm:text-base">
+              Download your portfolio as a static HTML file, then push it live in seconds. No build tools required.
+            </p>
+          </div>
+
+          <div className="scroll-reveal grid grid-cols-1 gap-5 sm:grid-cols-2">
+
+            {/* GitHub Pages card */}
+            <div className="group relative flex flex-col gap-5 rounded-2xl border border-border bg-card p-6 transition hover:border-foreground/30 sm:p-8">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background">
+                  <GitHubIcon size={20} />
+                </div>
+                <div>
+                  <div className="font-medium text-sm">GitHub Pages</div>
+                  <div className="text-xs text-muted-foreground">Free · yourname.github.io</div>
+                </div>
+                <span className="ml-auto rounded-full bg-green-500/10 px-2.5 py-0.5 text-[11px] font-medium text-green-600 dark:text-green-400">Free</span>
+              </div>
+              <ol className="space-y-3 text-sm text-muted-foreground">
+                {[
+                  { n: "1", t: "Download your portfolio", d: "Click \"Download HTML\" in the editor to get your static file." },
+                  { n: "2", t: "Create a GitHub repo", d: "Name it yourname.github.io for a root domain, or anything else for a sub-path." },
+                  { n: "3", t: "Push the file as index.html", d: "Rename your download to index.html and push it to the main branch." },
+                  { n: "4", t: "Enable GitHub Pages", d: "Settings → Pages → Source: main branch / root. Live in ~60 seconds." },
+                ].map((step) => (
+                  <li key={step.n} className="flex gap-3">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border text-[11px] text-muted-foreground">{step.n}</span>
+                    <div>
+                      <span className="font-medium text-foreground">{step.t} — </span>
+                      {step.d}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+              <a
+                href="https://pages.github.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-auto inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm hover:bg-accent transition-colors"
+              >
+                <GitHubIcon size={14} />
+                GitHub Pages docs
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden>
+                  <path d="M2.5 7.5L7.5 2.5M7.5 2.5H3.5M7.5 2.5v4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </a>
+            </div>
+
+            {/* Vercel card */}
+            <div className="group relative flex flex-col gap-5 rounded-2xl border border-border bg-card p-6 transition hover:border-foreground/30 sm:p-8">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background">
+                  <VercelIcon size={18} />
+                </div>
+                <div>
+                  <div className="font-medium text-sm">Vercel</div>
+                  <div className="text-xs text-muted-foreground">Free · yourname.vercel.app</div>
+                </div>
+                <span className="ml-auto rounded-full bg-blue-500/10 px-2.5 py-0.5 text-[11px] font-medium text-blue-600 dark:text-blue-400">Fastest</span>
+              </div>
+              <ol className="space-y-3 text-sm text-muted-foreground">
+                {[
+                  { n: "1", t: "Download your portfolio", d: "Click \"Download HTML\" in the editor to get your static file." },
+                  { n: "2", t: "Push to a GitHub repo", d: "Create any new repo and push your index.html to the main branch." },
+                  { n: "3", t: "Import on Vercel", d: "Go to vercel.com/new, import your repo. Vercel auto-detects static HTML." },
+                  { n: "4", t: "Click Deploy", d: "That's it — your site is live at yourname.vercel.app with HTTPS & CDN." },
+                ].map((step) => (
+                  <li key={step.n} className="flex gap-3">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border text-[11px] text-muted-foreground">{step.n}</span>
+                    <div>
+                      <span className="font-medium text-foreground">{step.t} — </span>
+                      {step.d}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+              <a
+                href="https://vercel.com/new"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-auto inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background hover:opacity-90 transition-opacity"
+              >
+                <VercelIcon size={13} />
+                Deploy on Vercel
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden>
+                  <path d="M2.5 7.5L7.5 2.5M7.5 2.5H3.5M7.5 2.5v4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </a>
+            </div>
+
+            {/* Netlify drop card */}
+            <div className="scroll-reveal group relative flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 transition hover:border-foreground/30 sm:col-span-2 sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:p-8">
+              <div className="flex items-center gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-background">
+                  {/* Netlify N logo */}
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                    <path d="M16.934 8.519a1.044 1.044 0 0 1 .303.23l2.349-1.045-2.192-2.171-.46 2.986zM12.06 6.546a1.305 1.305 0 0 1 .209.574l3.497 1.635 .46-2.986-2.936-.686-1.23 1.463zM15.506 9.25a1.305 1.305 0 0 1-.051.41L17.88 10.7V8.768l-2.373.482zM12 .001L6 6l3 3 6-6-3-3zm0 0" />
+                    <path d="M12 24l6-6-3-3-6 6 3 3zm-6-6l-3.5-3.5-2 2L4 20l2-2zm0 0" />
+                    <path d="M0 12l3 3 3-3-3-3-3 3zm24 0l-3-3-3 3 3 3 3-3zm0 0" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="font-medium text-sm">Netlify Drop</div>
+                  <div className="text-xs text-muted-foreground">Drag-and-drop your HTML file at netlify.com/drop. No account needed. Live in 10 seconds.</div>
+                </div>
+              </div>
+              <a
+                href="https://app.netlify.com/drop"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 inline-flex items-center justify-center gap-2 rounded-full border border-border px-6 py-2.5 text-sm hover:bg-accent transition-colors"
+              >
+                Open Netlify Drop
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden>
+                  <path d="M2.5 7.5L7.5 2.5M7.5 2.5H3.5M7.5 2.5v4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </a>
+            </div>
+
+          </div>
         </div>
       </section>
 
@@ -515,6 +705,7 @@ function Landing() {
           </div>
           <div className="flex flex-col items-center gap-2 text-center sm:flex-row sm:items-center sm:gap-4 sm:text-left">
             <Link to="/showcase" className="hover:text-foreground transition-colors">Showcase</Link>
+            <a href="#deploy" className="hover:text-foreground transition-colors">Deploy</a>
             <span className="hidden sm:inline">Made with care · No accounts, no tracking</span>
             <span className="sm:hidden">No accounts, no tracking</span>
             <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 hover:text-foreground transition-colors">
