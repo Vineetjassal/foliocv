@@ -100,11 +100,111 @@ box-shadow:0 2px 12px rgba(0,0,0,.15);transition:all .25s;font-family:inherit;">
 })();<\/script>`;
 
 // ════════════════════════════════════════════════════════════════════════════════
+// LOADING SPLASH SCREEN — pure CSS, auto-hides after 1.4 s
+// Initials are derived at runtime via a tiny inline <script>.
+// ════════════════════════════════════════════════════════════════════════════════
+function buildLoader(name: string): string {
+  const initials = name.split(" ").slice(0, 2).map(w => w[0] || "").join("").toUpperCase() || "";
+  return `
+<!-- LOADER -->
+<div id="fc-loader" aria-hidden="true">
+  <div class="fc-loader-ring"></div>
+  <div class="fc-loader-initials">${esc(initials)}</div>
+  <div class="fc-loader-bar"></div>
+</div>
+<style>
+#fc-loader{
+  position:fixed;inset:0;z-index:99999;
+  background:var(--bg,#fff);
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:1.2rem;
+  transition:opacity .4s .05s, visibility .4s .05s;
+}
+#fc-loader.fc-loader-gone{
+  opacity:0;visibility:hidden;pointer-events:none;
+}
+.fc-loader-ring{
+  width:52px;height:52px;
+  border:2.5px solid var(--line,rgba(0,0,0,.12));
+  border-top-color:var(--accent,#000);
+  border-radius:50%;
+  animation:loaderSpin .75s linear infinite;
+}
+.fc-loader-initials{
+  font-size:1.05rem;font-weight:700;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--text-primary,#000);
+  animation:loaderFadeUp .5s .1s cubic-bezier(.16,1,.3,1) both;
+}
+.fc-loader-bar{
+  width:120px;height:2px;
+  background:var(--line,rgba(0,0,0,.1));
+  border-radius:999px;overflow:hidden;
+  animation:loaderFadeUp .5s .15s cubic-bezier(.16,1,.3,1) both;
+}
+.fc-loader-bar::after{
+  content:'';
+  display:block;height:100%;
+  background:var(--accent,#000);
+  animation:loaderProgress 1s .1s cubic-bezier(.4,0,.2,1) forwards;
+  width:0;
+}
+@keyframes loaderSpin{
+  to{transform:rotate(360deg);}
+}
+@keyframes loaderFadeUp{
+  from{opacity:0;transform:translateY(10px);}
+  to  {opacity:1;transform:translateY(0);}
+}
+@keyframes loaderProgress{
+  0%  {width:0%;}
+  60% {width:70%;}
+  100%{width:100%;}
+}
+</style>
+<script>
+(function(){
+  var L=document.getElementById('fc-loader');
+  /* Hide loader once page fonts + images are ready (max 1.5 s) */
+  function hide(){if(L)L.classList.add('fc-loader-gone');}
+  if(document.readyState==='complete'){
+    setTimeout(hide,320);
+  } else {
+    window.addEventListener('load',function(){setTimeout(hide,320);});
+    /* Hard cap: never show more than 1.5 s */
+    setTimeout(hide,1500);
+  }
+})();
+<\/script>`;
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// SCROLL-REVEAL — pure CSS + tiny IntersectionObserver inline script
+// Adds .sr-visible when element enters viewport.
+// ════════════════════════════════════════════════════════════════════════════════
+const scrollRevealScript = `
+<script>
+(function(){
+  if(!('IntersectionObserver' in window)){
+    document.querySelectorAll('.sr').forEach(function(el){el.classList.add('sr-visible');});
+    return;
+  }
+  var io=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){e.target.classList.add('sr-visible');io.unobserve(e.target);}
+    });
+  },{threshold:0.12,rootMargin:'0px 0px -40px 0px'});
+  document.querySelectorAll('.sr').forEach(function(el){io.observe(el);});
+})();
+<\/script>`;
+
+// ════════════════════════════════════════════════════════════════════════════════
 // PURE CSS ANIMATIONS — shared across all 4 templates
-// Zero JS. Uses @keyframes, animation-delay stagger, :hover transitions.
+// Zero JS for animations. Uses @keyframes, stagger delays, :hover transitions.
+// Scroll-reveal via .sr / .sr-visible classes (toggled by tiny IO script above).
 // All animations respect prefers-reduced-motion.
 // ════════════════════════════════════════════════════════════════════════════════
 const cssAnimations = `
+/* ═══ @keyframes library ═══ */
 @keyframes fadeUp {
   from { opacity:0; transform:translateY(28px); }
   to   { opacity:1; transform:translateY(0); }
@@ -159,6 +259,30 @@ const cssAnimations = `
   from { opacity:0; transform:translateY(-100%); }
   to   { opacity:1; transform:translateY(0); }
 }
+@keyframes shimmer {
+  0%   { background-position:-200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes pulse {
+  0%,100% { opacity:1; }
+  50%      { opacity:.45; }
+}
+@keyframes srFadeUp {
+  from { opacity:0; transform:translateY(32px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+@keyframes srFadeIn {
+  from { opacity:0; }
+  to   { opacity:1; }
+}
+@keyframes srSlideLeft {
+  from { opacity:0; transform:translateX(-24px); }
+  to   { opacity:1; transform:translateX(0); }
+}
+@keyframes srScaleIn {
+  from { opacity:0; transform:scale(0.9); }
+  to   { opacity:1; transform:scale(1); }
+}
 
 /* ── Respect reduced-motion ── */
 @media (prefers-reduced-motion: reduce) {
@@ -167,7 +291,32 @@ const cssAnimations = `
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+  .sr { opacity:1 !important; transform:none !important; }
 }
+
+/* ══ Scroll-reveal base — elements start hidden ══ */
+.sr {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity .65s cubic-bezier(.16,1,.3,1),
+              transform .65s cubic-bezier(.16,1,.3,1);
+}
+.sr.sr-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.sr-left  { transform: translateX(-24px); }
+.sr-right { transform: translateX(24px); }
+.sr-scale { transform: scale(0.9); }
+.sr-left.sr-visible, .sr-right.sr-visible, .sr-scale.sr-visible {
+  opacity:1; transform:none;
+}
+/* stagger delays for child groups */
+.sr-d1 { transition-delay: .07s; }
+.sr-d2 { transition-delay: .14s; }
+.sr-d3 { transition-delay: .21s; }
+.sr-d4 { transition-delay: .28s; }
+.sr-d5 { transition-delay: .35s; }
 
 /* ── Nav entrance ── */
 .fc-nav {
@@ -234,8 +383,16 @@ const cssAnimations = `
 
 .pcard { transition: box-shadow .3s, transform .3s cubic-bezier(.16,1,.3,1); }
 .pcard:hover { transform: translateY(-5px); box-shadow: 0 20px 48px var(--card-shadow); }
-.pcard-img { transition: transform .45s cubic-bezier(.16,1,.3,1), filter .45s; }
+.pcard-img { transition: transform .45s cubic-bezier(.16,1,.3,1), filter .45s; overflow:hidden; }
 .pcard:hover .pcard-img { transform: scale(1.07); filter: brightness(1.06); }
+
+/* ── Shimmer on pcard-img while loading ── */
+.pcard-img[src]{
+  background: linear-gradient(90deg,var(--bg3) 25%,var(--bg2) 50%,var(--bg3) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+.pcard-img.loaded { animation: none; background: none; }
 
 /* ── Experience / Education slide-in stagger ── */
 .exp, .edu { animation: slideInLeft .5s cubic-bezier(.16,1,.3,1) both; }
@@ -264,6 +421,16 @@ const cssAnimations = `
   background: currentColor;
   margin-top: .3rem;
   animation: drawLine .65s .3s cubic-bezier(.16,1,.3,1) both;
+}
+
+/* ── Typing cursor blink (applied to .fc-typing) ── */
+.fc-typing::after {
+  content: '|';
+  display: inline-block;
+  margin-left: 2px;
+  animation: pulse .9s step-end infinite;
+  color: var(--accent);
+  font-weight: 300;
 }
 `;
 
@@ -394,13 +561,14 @@ ${buildSeoHead(data)}
 </head>
 <body class="ink-body">
 
+${buildLoader(data.name)}
 ${buildNav(data.name)}
 
 <div class="ink-outer" id="home">
   <div class="fc-card ink-card">
     <header class="ink-masthead">
       <div class="ink-dateline">${data.location ? esc(data.location) + " · " : ""}Portfolio</div>
-      <h1 class="ink-nameplate">${esc(data.name)}</h1>
+      <h1 class="ink-nameplate fc-typing">${esc(data.name)}</h1>
       <div class="ink-rule ink-rule-anim"></div>
       <div class="ink-subhead">${data.title ? esc(data.title) : ""}</div>
     </header>
@@ -423,7 +591,7 @@ ${buildNav(data.name)}
     <div class="ink-rule"></div>
 
     <div class="ink-columns" id="project">
-      <div class="ink-col">
+      <div class="ink-col sr sr-d1">
         ${data.experience?.length ? `<section><h2 class="sec-label">Experience</h2>${expItems(data)}</section>` : ""}
         ${data.projects?.filter(p => p.include !== false).length ? `
         <section style="margin-top:2rem">
@@ -431,7 +599,7 @@ ${buildNav(data.name)}
           <div class="ink-pgrid">${projectCards(data)}</div>
         </section>` : ""}
       </div>
-      <div class="ink-col">
+      <div class="ink-col sr sr-d2">
         ${data.skills?.length ? `<section><h2 class="sec-label">Skills</h2><div class="ink-badges">${skillBadges(data.skills)}</div></section>` : ""}
         ${data.education?.length ? `<section style="margin-top:2rem"><h2 class="sec-label">Education</h2>${eduItems(data)}</section>` : ""}
       </div>
@@ -439,6 +607,7 @@ ${buildNav(data.name)}
   </div>
 </div>
 ${themeToggle}
+${scrollRevealScript}
 </body></html>`;
 
   const css = bwBase + `
@@ -473,8 +642,7 @@ ${themeToggle}
 .ink-aside-links a:hover{padding-left:.5rem;text-decoration:none;}
 .ink-columns{display:grid;grid-template-columns:1fr 1fr;gap:2.5rem;margin-top:1.5rem;}
 @media(max-width:640px){.ink-columns{grid-template-columns:1fr;}}
-.ink-col{animation:fadeUp .6s .3s cubic-bezier(.16,1,.3,1) both;}
-.ink-col:nth-child(2){animation-delay:.45s;}
+.ink-col{}
 .ink-badges{display:flex;flex-wrap:wrap;gap:.2rem;}
 .ink-pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem;margin-top:.5rem;}
 `;
@@ -496,6 +664,7 @@ ${buildSeoHead(data)}
 </head>
 <body class="sh-body">
 
+${buildLoader(data.name)}
 ${buildNav(data.name)}
 
 <div class="sh-outer" id="home">
@@ -516,22 +685,22 @@ ${buildNav(data.name)}
     <main class="sh-main" id="project">
       ${gallery}
       ${data.about ? `
-      <section class="sh-sec">
+      <section class="sh-sec sr">
         <h2 class="sec-label">About</h2>
         <p class="sh-text">${esc(data.about)}</p>
       </section>` : ""}
       ${data.experience?.length ? `
-      <section class="sh-sec">
+      <section class="sh-sec sr sr-d1">
         <h2 class="sec-label">Experience</h2>
         ${expItems(data)}
       </section>` : ""}
       ${data.education?.length ? `
-      <section class="sh-sec">
+      <section class="sh-sec sr sr-d2">
         <h2 class="sec-label">Education</h2>
         ${eduItems(data)}
       </section>` : ""}
       ${data.projects?.filter(p => p.include !== false).length ? `
-      <section class="sh-sec">
+      <section class="sh-sec sr sr-d3">
         <h2 class="sec-label">Projects</h2>
         <div class="sh-pgrid">${projectCards(data)}</div>
       </section>` : ""}
@@ -539,6 +708,7 @@ ${buildNav(data.name)}
   </div>
 </div>
 ${themeToggle}
+${scrollRevealScript}
 </body></html>`;
 
   const css = bwBase + `
@@ -608,13 +778,14 @@ ${buildSeoHead(data)}
 </head>
 <body class="mo-body">
 
+${buildLoader(data.name)}
 ${buildNav(data.name)}
 
 <div class="mo-outer" id="home">
   <div class="fc-card mo-card">
     <header class="mo-hero" id="about">
       ${data.avatar ? `<img src="${esc(data.avatar)}" alt="${esc(data.name)}" class="mo-av fc-av-anim" />` : ""}
-      <h1 class="mo-name">${esc(data.name)}</h1>
+      <h1 class="mo-name fc-typing">${esc(data.name)}</h1>
       ${data.title ? `<div class="mo-title">${esc(data.title)}</div>` : ""}
       ${data.location ? `<div class="mo-loc">${esc(data.location)}</div>` : ""}
       <div class="mo-links">${socialLinks(data)}</div>
@@ -625,38 +796,39 @@ ${buildNav(data.name)}
     ${gallery}
 
     ${data.bio || data.about ? `
-    <section class="mo-sec">
+    <section class="mo-sec sr">
       <div class="mo-sec-label">about</div>
       ${data.bio ? `<p class="mo-bio">${esc(data.bio)}</p>` : ""}
       ${data.about ? `<p class="mo-text">${esc(data.about)}</p>` : ""}
     </section>` : ""}
 
     ${data.skills?.length ? `
-    <section class="mo-sec">
+    <section class="mo-sec sr sr-d1">
       <div class="mo-sec-label">skills</div>
       <div class="mo-badges">${skillBadges(data.skills)}</div>
     </section>` : ""}
 
     ${data.experience?.length ? `
-    <section class="mo-sec">
+    <section class="mo-sec sr sr-d2">
       <div class="mo-sec-label">experience</div>
       ${expItems(data)}
     </section>` : ""}
 
     ${data.education?.length ? `
-    <section class="mo-sec">
+    <section class="mo-sec sr sr-d3">
       <div class="mo-sec-label">education</div>
       ${eduItems(data)}
     </section>` : ""}
 
     ${data.projects?.filter(p => p.include !== false).length ? `
-    <section class="mo-sec" id="project">
+    <section class="mo-sec sr sr-d4" id="project">
       <div class="mo-sec-label">projects</div>
       <div class="mo-pgrid">${projectCards(data)}</div>
     </section>` : ""}
   </div>
 </div>
 ${themeToggle}
+${scrollRevealScript}
 </body></html>`;
 
   const css = bwBase + `
@@ -689,13 +861,7 @@ ${themeToggle}
 .mo-divider-anim{animation:drawLine .7s .3s cubic-bezier(.16,1,.3,1) both;}
 .mo-sec{
   margin-bottom:2.5rem;
-  animation:fadeUp .5s cubic-bezier(.16,1,.3,1) both;
 }
-.mo-sec:nth-child(2){animation-delay:.08s;}
-.mo-sec:nth-child(3){animation-delay:.16s;}
-.mo-sec:nth-child(4){animation-delay:.24s;}
-.mo-sec:nth-child(5){animation-delay:.32s;}
-.mo-sec:nth-child(n+6){animation-delay:.40s;}
 .mo-sec-label{
   font-family:'IBM Plex Mono',monospace;font-size:.6rem;
   letter-spacing:.28em;text-transform:uppercase;color:var(--text-faint);
@@ -728,6 +894,7 @@ ${buildSeoHead(data)}
 </head>
 <body class="rl-body">
 
+${buildLoader(data.name)}
 ${buildNav(data.name)}
 
 <div class="rl-outer" id="home">
@@ -742,7 +909,7 @@ ${buildNav(data.name)}
     </div>
 
     ${data.bio || data.location ? `
-    <div class="rl-row rl-intro-row" id="about">
+    <div class="rl-row rl-intro-row sr" id="about">
       <div class="rl-row-label">intro</div>
       <div class="rl-row-content">
         ${data.bio ? `<p class="rl-bio">${esc(data.bio)}</p>` : ""}
@@ -754,37 +921,38 @@ ${buildNav(data.name)}
     ${gallery}
 
     ${data.about ? `
-    <div class="rl-row">
+    <div class="rl-row sr sr-d1">
       <div class="rl-row-label">about</div>
       <div class="rl-row-content rl-wide"><p class="rl-text">${esc(data.about)}</p></div>
     </div>` : ""}
 
     ${data.skills?.length ? `
-    <div class="rl-row">
+    <div class="rl-row sr sr-d2">
       <div class="rl-row-label">skills</div>
       <div class="rl-row-content rl-wide"><div class="rl-badges">${skillBadges(data.skills)}</div></div>
     </div>` : ""}
 
     ${data.experience?.length ? `
-    <div class="rl-row">
+    <div class="rl-row sr sr-d3">
       <div class="rl-row-label">work</div>
       <div class="rl-row-content rl-wide">${expItems(data)}</div>
     </div>` : ""}
 
     ${data.education?.length ? `
-    <div class="rl-row">
+    <div class="rl-row sr sr-d4">
       <div class="rl-row-label">edu</div>
       <div class="rl-row-content rl-wide">${eduItems(data)}</div>
     </div>` : ""}
 
     ${data.projects?.filter(p => p.include !== false).length ? `
-    <div class="rl-row" id="project">
+    <div class="rl-row sr sr-d5" id="project">
       <div class="rl-row-label">projects</div>
       <div class="rl-row-content rl-wide"><div class="rl-pgrid">${projectCards(data)}</div></div>
     </div>` : ""}
   </div>
 </div>
 ${themeToggle}
+${scrollRevealScript}
 </body></html>`;
 
   const css = bwBase + `
@@ -815,12 +983,6 @@ ${themeToggle}
   border-radius:.25rem;
 }
 .rl-row:hover{background:var(--accent-light);}
-.rl-row:nth-child(2){animation-delay:.07s;}
-.rl-row:nth-child(3){animation-delay:.14s;}
-.rl-row:nth-child(4){animation-delay:.21s;}
-.rl-row:nth-child(5){animation-delay:.28s;}
-.rl-row:nth-child(6){animation-delay:.35s;}
-.rl-row:nth-child(n+7){animation-delay:.42s;}
 @media(max-width:680px){.rl-row{grid-template-columns:1fr;}}
 .rl-row-label{font-family:'Space Mono',monospace;font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:var(--text-faint);padding-top:.1rem;}
 .rl-wide{grid-column:2 / 4;}
